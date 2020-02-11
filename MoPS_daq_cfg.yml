@@ -1,0 +1,19 @@
+Application: 
+        name : 'MoPS Testing'
+
+CAN_Interface:
+    AnaGate :
+        name        :   'AnaGate'
+        bitrate     :   125000
+        ipAddress   :   '192.168.1.254'
+        timeout     :   500
+        channel     :   0
+    
+    Kvaser  :
+        name        :   'Kvaser'
+        bitrate     :   125000
+        ipAddress   :   '192.168.1.254'
+        timeout     :   500
+        channel     :   0
+Other:
+    user    :   "Ahmed Qamesh"
