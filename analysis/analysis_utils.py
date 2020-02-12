@@ -27,73 +27,96 @@ import pandas as pd
 import time
 import random
 from numba import njit
-from graphics_Utils import DataMonitoring
+from graphics_Utils import DataMonitoring , ChildWindow 
 from analysis import logger
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
+import coloredlogs as cl
+import verboselogs
 log = logger.setup_derived_logger('analysis utils')
-def compute_move(size_x=1, z=20,z_Delay=None, x_Delay=0, x=20, size_z=1, sourcemeter=False, directory=None):
-    # Initial plot will be generated
-    '''
-    Assuming that the cabinet door is the -z
-    1 mm is equivalent to 56.88888 step
-    x : Number of movements to x direction
-    z: Number of movements inside the cabinet
-    Size_x: size of the step in  mm x direction
-    Size_z: size of the step in  mm z direction
-    '''
-#     size_x = size_x*57000
-#     size_z=size_z*57000
-#     if Sourcemeter:
-#         dut = Dut('Scanning_pyserial.yaml')
-#         dut.init()
-#         dut['sm'].write(":OUTP ON")
-#         #dut['sm'].write("*RST")
-#         #dut['sm'].write(":SOUR:VOLT:RANG 60")
-#         #dut['sm'].write('SENS:CURR:PROT ' + str(CurrentLimit))
-#         #print "The Protection Current limit is", dut['sm'].ask("SENS:CURR:PROT?")
-#         dut['sm'].write(":SOUR:FUNC VOLT")
-#         dut['sm'].write(':SOUR:VOLT 50')
-#     else:
-#         dut = Dut('motorstage_Pyserial.yaml')
-#         dut.init()
-    def fill_snake_pattern(step_z=False,sourcemeter = False, size_z=None, a=None, b=None , c=None, size_x=None, x_Delay=None, z_Delay=z_Delay, directory=None):            
-         first_point = True
-         for step_x in tqdm(np.arange(a, b, c) , unit='xstep'):
-             #if not first_point:
-             #    pass
-                 # dut["ms"].read_write("MR%d" % (size_x), address=3) # x 50000,100,50 = 4.5 cm left/right
-             #first_point = False
-             time.sleep(x_Delay)
-             # if sourcemeter:
-                 # val = dut['sm'].ask(":MEAS:CURR?")
-                 # current = val[15:-43]
-             # else:
-             current = random.randint(1, 101)
-             beamspot[step_z, step_x] = float(current)
-             try: 
-                save_to_h5(data=beamspot, outname='beamspot_Live.h5', directory= directory)
-             except IndexError:  #open file failure
-                pass
-             #beamshow  = plt.imshow(beamspot, aspect='auto', origin='upper',  cmap=plt.get_cmap('tab20c'))
-             #plt.pause(0.05)
-         # dut["ms"].read_write("MR%d" % (-size_z), address=2)  # x# x 50000,100,50 = 4.5 cm in/out
-         time.sleep(z_Delay)
-    
-    t0 = time.time()
-    length = 20
-    config_beamspot = define_configured_array(size_x=size_x, z=z, x=x, size_z=size_z)
-    beamspot = np.zeros(shape=(z, x), dtype=np.float64)
-    for step_z in tqdm(np.arange(z), unit='zstep'):
-        a, b = config_beamspot[step_z].item(0) , config_beamspot[step_z].item(1)
-        c , new_size_x = config_beamspot[step_z].item(2), config_beamspot[step_z].item(3)
-        fill_snake_pattern(step_z=step_z , a=int(a), b=int(b) , c=int(c), size_x=int(new_size_x), x_Delay=x_Delay, z_Delay=z_Delay, directory = directory)
-    #plt.show()
-    outname='beamspot.h5'
-    save_to_h5(data=beamspot, outname=outname, directory=directory) 
-    log.info("The beamspot file is saved as " + os.path.join(directory, outname))
-    t1 = time.time()
-    log.info("The time Estimated is "+ np.str(t1 - t0)+" s")
 
+
+class BeamSpotScan(object):
+
+    def __init__(self, parent=None):
+       logger.extend_logging()
+       verboselogs.install()
+       self.logger = logging.getLogger(__name__)
+       self.logger.setLevel(logging.DEBUG)
+       self.logger.notice('Beam Spot Scanning ...')
+
+    def compute_move(self,size_x=1, z=20,z_Delay=None, x_Delay=0, x=20, size_z=1, sourcemeter=False, directory=None):
+        # Initial plot will be generated
+        '''
+        Assuming that the cabinet door is the -z
+        1 mm is equivalent to 56.88888 step
+        x : Number of movements to x direction
+        z: Number of movements inside the cabinet
+        Size_x: size of the step in  mm x direction
+        Size_z: size of the step in  mm z direction
+        '''
+    #     size_x = size_x*57000
+    #     size_z=size_z*57000
+    #     if Sourcemeter:
+    #         dut = Dut('Scanning_pyserial.yaml')
+    #         dut.init()
+    #         dut['sm'].write(":OUTP ON")
+    #         #dut['sm'].write("*RST")
+    #         #dut['sm'].write(":SOUR:VOLT:RANG 60")
+    #         #dut['sm'].write('SENS:CURR:PROT ' + str(CurrentLimit))
+    #         #print "The Protection Current limit is", dut['sm'].ask("SENS:CURR:PROT?")
+    #         dut['sm'].write(":SOUR:FUNC VOLT")
+    #         dut['sm'].write(':SOUR:VOLT 50')
+    #     else:
+    #         dut = Dut('motorstage_Pyserial.yaml')
+    #         dut.init()
+        def fill_snake_pattern(step_z=False,sourcemeter = sourcemeter, size_z=None, a=None, b=None , c=None, size_x=None, x_Delay=None, z_Delay=z_Delay, directory=None):            
+             first_point = True
+             for step_x in tqdm(np.arange(a, b, c) , unit='xstep'):
+                 #if not first_point:
+                 #    pass
+                     # dut["ms"].read_write("MR%d" % (size_x), address=3) # x 50000,100,50 = 4.5 cm left/right
+                 #first_point = False
+                 time.sleep(x_Delay)
+                 if sourcemeter:
+                     val = dut['sm'].ask(":MEAS:CURR?")
+                     current = val[15:-43]
+                 else:
+                     current = random.randint(0, 100)
+                 # save for Monitoring 
+                 self.set_data(x = current)
+                 beamspot[step_z, step_x] = float(current)
+                 try: 
+                    save_to_h5(data=beamspot, outname='beamspot_Live.h5', directory= directory)
+                 except IndexError:  #open file failure
+                    pass
+                 #beamshow  = plt.imshow(beamspot, aspect='auto', origin='upper',  cmap=plt.get_cmap('tab20c'))
+                 #plt.pause(0.05)
+             # dut["ms"].read_write("MR%d" % (-size_z), address=2)  # x# x 50000,100,50 = 4.5 cm in/out
+             time.sleep(z_Delay)
+        
+        t0 = time.time()
+        length = 20
+        config_beamspot = define_configured_array(size_x=size_x, z=z, x=x, size_z=size_z)
+        beamspot = np.zeros(shape=(z, x), dtype=np.float64)
+        for step_z in tqdm(np.arange(z), unit='zstep'):
+            a, b = config_beamspot[step_z].item(0) , config_beamspot[step_z].item(1)
+            c , new_size_x = config_beamspot[step_z].item(2), config_beamspot[step_z].item(3)
+            fill_snake_pattern(step_z=step_z , a=int(a), b=int(b) , c=int(c), size_x=int(new_size_x), x_Delay=x_Delay, z_Delay=z_Delay, directory = directory)
+        #plt.show()
+        outname='beamspot.h5'
+        save_to_h5(data=beamspot, outname=outname, directory=directory) 
+        log.info("The beamspot file is saved as " + os.path.join(directory, outname))
+        t1 = time.time()
+        log.info("The time Estimated is "+ np.str(t1 - t0)+" s")
+
+
+    def set_data(self, x=None):
+        self.data = x
+     
+    def get_data(self):
+        return self.data 
+        
 def define_configured_array(size_x=1, z=20, x=20, size_z=1):
     #log.info('Creating a confiiguration array for the snake pattern')
     config_beamspot = np.zeros(shape=(z, 5), dtype=np.float64)
@@ -113,8 +136,12 @@ def save_to_h5(data=None, outname=None, directory=None, title = "Beamspot scan r
     with tb.open_file(filename, "w") as out_file_h5:
         out_file_h5.create_array(out_file_h5.root, name='data', title = title, obj=data)  
 
+def open_yaml_file( directory=None , file=None):
+    filename = os.path.join(directory, file)
+    with open(filename, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    return cfg
 
-# create config dict from yaml text file
 def save_to_csv(data=None, outname=None, directory=None):
     df = pd.DataFrame(data)
     if not os.path.exists(directory):
@@ -128,12 +155,7 @@ def open_h5_file(outname=None, directory=None):
     with tb.open_file(filename, 'r') as in_file:
         data = in_file.root.data[:]
     return data
-
-def open_yaml_file( directory=None , file=None):
-    filename = os.path.join(directory, file)
-    with open(filename, 'r') as ymlfile:
-        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
-    return cfg
+    
 def plot_spline_masking(calibrated_file=False, PdfPages=PdfPages):
     with tb.open_file(calibrated_file, 'r') as in_file:
         spline_mask = in_file.root.configuration.spline_mask[:]
@@ -334,4 +356,4 @@ def dose_current(directory=False, PdfPages=False):
 def get_project_root() -> Path:
     """Returns project root folder."""
     return Path(__file__).parent.parent
-    
+

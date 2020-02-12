@@ -47,7 +47,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             logdir = os.path.join(rootdir, 'log')
             
         ts = os.path.join(logdir,
-                          time.strftime('%Y-%m-%d_%H-%M-%S_OPCUA_Server.'))
+                          time.strftime('%Y-%m-%d_%H-%M-%S_MoPs_daq.'))
         self.__fh = RotatingFileHandler(ts + 'log', backupCount=10,
                                         maxBytes=10 * 1024 * 1024)
         fmt = logging.Formatter(logformat)
@@ -143,13 +143,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # 1. Window settings
         self.setWindowTitle(self.app_name)
         #self.setGeometry(300, 300, 800, 400)
-        self.resize(800, 600)
+        #self.resize(800, 600)
         
         # call widgets
         self.createTopLeftTabGroupBox()
-        self.createTopRightGroupBox()
-        self.createBottomRightGroupBox()
-        self.createBottomLeftGroupBox()
         self.createProgressBar()
 
         # Creat a frame in the main menu for the gridlayout
@@ -160,11 +157,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         
         # SetLayout
         mainLayout = QGridLayout()
-        mainLayout.addWidget(self.topLeftTabGroupBox, 1, 0)
-        mainLayout.addWidget(self.topRightGroupBox, 1, 1)
-        mainLayout.addWidget(self.bottomLeftGroupBox, 2, 0)
-        mainLayout.addWidget(self.bottomRightGroupBox , 2, 1)
-        mainLayout.addWidget(self.progressBar, 3, 0, 1, 2)
+        #mainLayout.addWidget(self.topLeftTabGroupBox, 1, 0)
+        mainLayout.addWidget(self.progressBar,0,0)
         
         mainFrame.setLayout(mainLayout)
         # 3. Show
@@ -173,22 +167,19 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def createTopLeftTabGroupBox(self):
         # Define a group for the whole wedgit
-        self.topLeftTabGroupBox = QGroupBox("Controller interface")
+        self.topLeftTabGroupBox = QGroupBox("")
         # Define a frame for the figure
         plotframe = QFrame(self)
         plotframe.setStyleSheet("QWidget { background-color: #eeeeec; }")
         plotframe.setLineWidth(0.6)
         # Define a layout
         vLayout = QVBoxLayout()
-        #comboBox and label for channel
-        chLabel = QLabel("Channel", self)
-        chLabel.setText("Controller")
-
         controllerLayout = QHBoxLayout()
-        items = ["AnaGate","Kvaser","Others"]
+        items = ["AnaGate","Kvaser"]
         chComboBox = QComboBox(self)
         for item in items: chComboBox.addItem(item)
         chComboBox.activated[str].connect(self.set_interface)
+        
         
         h , w = 50 , 25
         connectButton = QPushButton("")
@@ -205,13 +196,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         
         controllerLayout.addWidget(chComboBox)
         controllerLayout.addWidget(connectButton)
-        
-        vLayout.addStretch(1)
-        vLayout.addWidget(chLabel)
         vLayout.addLayout(controllerLayout)
         self.setCentralWidget(plotframe)
         plotframe.setLayout(vLayout)
         self.topLeftTabGroupBox.setLayout(vLayout)
+    
     
     def set_interface(self, x):
         self.__interface = x
@@ -220,68 +209,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         print(self.__interface)
         return self.__interface
 
-    def createTopRightGroupBox(self):
-        # Define a group for the whole wedgit
-        self.topRightGroupBox = QGroupBox("Data Monitoring")
-        # Define a frame for the figure
-        plotframe = QFrame(self)
-        plotframe.setStyleSheet("QWidget { background-color: #eeeeec; }")
-        plotframe.setLineWidth(0.6)
-        # Define a layout
-        plotLayout = QVBoxLayout()
-        # add the figure to the layout
-        Fig = DataMonitoring.LiveMonitoringData()
-        plotLayout.addStretch(1)
-        plotLayout.addWidget(Fig)
-        self.setCentralWidget(plotframe)
-        plotframe.setLayout(plotLayout)
-        self.topRightGroupBox.setLayout(plotLayout)
-
-    def createBottomRightGroupBox(self):
-        self.bottomRightGroupBox = QGroupBox("Log Viewer")
-        logframe = QFrame(self)
-        logframe.setStyleSheet("QWidget { background-color: #eeeeec; }")
-        logframe.setLineWidth(0.6)
-        logEdit= LogWindow.LoggerDialog()
-        logLayout = QVBoxLayout()
-        logLayout.addWidget(logEdit)
-        self.setCentralWidget(logframe)
-        #self.setLayout(logLayout)
-        self.bottomRightGroupBox.setLayout(logLayout)    
-
-    def createBottomLeftGroupBox(self):
-        self.bottomLeftGroupBox = QGroupBox("Group 3")
-        self.bottomLeftGroupBox.setCheckable(True)
-        self.bottomLeftGroupBox.setChecked(True)
-
-        lineEdit = QLineEdit('s3cRe7')
-        lineEdit.setEchoMode(QLineEdit.Password)
-
-        spinBox = QSpinBox(self.bottomLeftGroupBox)
-        spinBox.setValue(50)
-
-        dateTimeEdit = QDateTimeEdit(self.bottomLeftGroupBox)
-        dateTimeEdit.setDateTime(QDateTime.currentDateTime())
-
-        slider = QSlider(Qt.Horizontal, self.bottomLeftGroupBox)
-        slider.setValue(40)
-
-        scrollBar = QScrollBar(Qt.Horizontal, self.bottomLeftGroupBox)
-        scrollBar.setValue(60)
-
-        dial = QDial(self.bottomLeftGroupBox)
-        dial.setValue(30)
-        dial.setNotchesVisible(True)
-
-        layout = QGridLayout()
-        layout.addWidget(lineEdit, 0, 0, 1, 2)
-        layout.addWidget(spinBox, 1, 0, 1, 2)
-        layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
-        layout.addWidget(slider, 3, 0)
-        layout.addWidget(scrollBar, 4, 0)
-        layout.addWidget(dial, 3, 1, 2, 1)
-        layout.setRowStretch(5, 1)
-        self.bottomLeftGroupBox.setLayout(layout)
 
     def createProgressBar(self):
         self.progressBar = QProgressBar()
