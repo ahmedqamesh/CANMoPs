@@ -27,7 +27,7 @@ import pandas as pd
 import time
 import random
 from numba import njit
-from graphics_Utils import DataMonitoring , ChildWindow 
+from graphics_Utils import dataMonitoring , menuWindow , childWindow ,logWindow
 from analysis import logger
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
