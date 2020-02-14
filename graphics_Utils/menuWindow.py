@@ -13,7 +13,8 @@ from graphics_Utils import dataMonitoring , childWindow ,logWindow
 class MenuBar(QWidget):  
     def __init__(self,parent = None):
         super(MenuBar,self).__init__(parent)
-
+        self.MainWindow = QMainWindow()
+        
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
@@ -82,12 +83,12 @@ class MenuBar(QWidget):
         outWindow_action = QAction('&Output Window', mainwindow, checkable=True)
         outWindow_action.setStatusTip('Output Window')
         outWindow_action.setChecked(False)
-        outWindow_action.triggered.connect(self.outputchildWindow)
+        outWindow_action.triggered.connect(self.outputChildWindow)
                 
         trend_action = QAction('&Data Trending', mainwindow, checkable=True)
         trend_action.setStatusTip('Data Trending')
         trend_action.setChecked(False)
-        trend_action.triggered.connect(self.trendchildWindow)
+        trend_action.triggered.connect(self.trendChildWindow)
         
         viewMenu.addAction(canSettings_action)
         viewMenu.addAction(canMessage_action)
@@ -162,42 +163,35 @@ class MenuBar(QWidget):
         status.showMessage("Ready")
         mainwindow.setStatusBar(status)
 
-
-    
     # Functions to run
     def canMessageChildWindow(self, state):
         if state:
-            self.canMessageMainWindow = QMainWindow()
-            self.ui.canMessageChildWindow(self.canMessageMainWindow)
-            self.canMessageMainWindow.show()
+            self.ui.canMessageChildWindow(self.MainWindow)
+            self.MainWindow.show()
         else:
             pass
     
     def canSettingsChildWindow(self,state):
         if state:
-            self.canSettingsChildWindow = QMainWindow()
-            self.ui.canSettingsChildWindow(self.canSettingsChildWindow)
-            self.canSettingsChildWindow.show()
+            self.ui.canSettingsChildWindow(self.MainWindow)
+            self.MainWindow.show()
         else:
             pass
 
 
    
-    def outputchildWindow(self,state):
+    def outputChildWindow(self,state):
         if state:
-            self.outputmainwindow = QMainWindow()
-            self.ui = childWindow.Ui_childWindow()
-            self.ui.outputchildWindow(self.outputmainwindow)
-            self.outputmainwindow.show()
+            self.ui.outputChildWindow(self.MainWindow)
+            self.MainWindow.show()
         else:
             pass
     
-    def trendchildWindow(self,state):
+    def trendChildWindow(self,state):
         if state:
-            self.trendmainwindow = QMainWindow()
-            self.ui = childWindow.Ui_childWindow()
-            self.ui.trendchildWindow(self.trendmainwindow)
-            self.trendmainwindow.show()
+
+            self.ui.trendChildWindow(self.MainWindow)
+            self.MainWindow.show()
         else:
             pass
             

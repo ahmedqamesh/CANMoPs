@@ -33,7 +33,7 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 import coloredlogs as cl
 import verboselogs
-log = logger.setup_derived_logger('analysis utils')
+#log = logger.setup_derived_logger('analysis utils')
 
 
 class BeamSpotScan(object):

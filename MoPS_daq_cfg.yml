@@ -1,6 +1,10 @@
 Application: 
         name : 'MoPS Testing'
 
+CAN_settings:
+        nodeIds: [8]
+        
+        
 CAN_Interface:
     AnaGate :
         name        :   'AnaGate'
