@@ -42,7 +42,8 @@ class LoggerDialog(QtWidgets.QDialog, QtWidgets.QPlainTextEdit):
         timer.start(period)
            
     def test(self):
-        logging.debug('damn, a bug')
+        msg
+        logging.debug("msg")
         #logging.info('something to remember')
         #logging.warning('that\'s not right')
         #logging.error('foobar')

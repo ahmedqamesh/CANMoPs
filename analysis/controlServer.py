@@ -65,7 +65,12 @@ class ControlServer(object):
         self.logger.notice('Read configuration file ...')
         if config is None:
             conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-8])
-     
+        
+        #get info about the application
+        self.__appName = conf['Application']['app_name']
+        self.__version = conf['Application']['version']
+        self.__interfaceItems =conf['Application']["interface_items"]
+        
         # Interface (Default is AnaGate)
         if interface is None:
             interface = conf['CAN_Interface']['AnaGate']['name']           
@@ -78,7 +83,7 @@ class ControlServer(object):
         """:obj:`int` : Internal attribute for the bit rate""" 
         if bitrate is None:
             bitrate = conf['CAN_Interface']['AnaGate']['bitrate']
-        bitrate = self._parseBitRate(bitrate)
+        #bitrate = self._parseBitRate(bitrate)
                
         self.__bitrate = bitrate
         #ipAddress
@@ -113,10 +118,8 @@ class ControlServer(object):
         if GUI is not None:
             self.logger.notice('Opening a graphical user Interface')
             self.start_graphicalInterface()
-        
-        self.set_nodeIds(conf["CAN_settings"]["nodeIds"])
         # Scan nodes
-        self.__nodeIds = self.get_nodeIds()
+        self.__nodeIds = conf["CAN_settings"]["nodeIds"]
         """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently
         present on the bus."""    
         self.__myDCs = {}
@@ -151,7 +154,6 @@ class ControlServer(object):
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(channel,canlib.canOPEN_ACCEPT_VIRTUAL)
         else:
-            print(baudrate)
             self.__ch = analib.Channel(ipAddress, channel, baudrate=baudrate)
         
     def set_canController(self, interface = None):
@@ -179,9 +181,14 @@ class ControlServer(object):
         self.__ipAddress = x
         
     def set_bitrate(self,x):
-        print(x)
         self.__bitrate = x
-        
+
+    def get_appName(self):
+        return self.__appName 
+    
+    def get_version(self):
+        return self.__version
+    
         
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
@@ -203,6 +210,8 @@ class ControlServer(object):
             raise AttributeError('You are using a Kvaser CAN interface!')
         return self.__ipAddress    
 
+    def get_interface_items(self):
+        return self.__interfaceItems
     
     def get_interface(self):
         """:obj:`str` : Vendor of the CAN interface. Possible values are
@@ -262,24 +271,24 @@ class ControlServer(object):
         """Currently used |CAN| channel. The actual class depends on the used
         |CAN| interface."""
         return self.__ch
-    
-    @property
-    def bitRate(self):
-        """:obj:`int` : Currently used bit rate. When you try to change it
-        :func:`stop` will be called before."""
-        if self.__interface == 'Kvaser':
-            return self.__bitrate
-        else:
-            return self.__ch.baudrate
-    
-    @bitRate.setter
-    def bitRate(self, bitrate):
-        if self.__interface == 'Kvaser':
-            self.stop()
-            self.__bitrate = bitrate
-            self.start()
-        else:
-            self.__ch.baudrate = bitrate     
+#     
+#     @property
+#     def bitRate(self):
+#         """:obj:`int` : Currently used bit rate. When you try to change it
+#         :func:`stop` will be called before."""
+#         if self.__interface == 'Kvaser':
+#             return self.__bitrate
+#         else:
+#             return self.__ch.baudrate
+#     
+#     @bitRate.setter
+#     def bitRate(self, bitrate):
+#         if self.__interface == 'Kvaser':
+#             self.stop()
+#             self.__bitrate = bitrate
+#             self.start()
+#         else:
+#             self.__ch.baudrate = bitrate     
 
     def sdoRead(self, nodeId, index, subindex, timeout=100,MAX_DATABYTES=8):
         """Read an object via |SDO|
@@ -372,6 +381,7 @@ class ControlServer(object):
             |SDO| write timeout in milliseconds. When :data:`None` or not
             given an infinit timeout is used.
         """
+        print(cobid, msg)
         if self.__interface == 'Kvaser':
             if timeout is None:
                 timeout = 0xFFFFFFFF
@@ -379,6 +389,7 @@ class ControlServer(object):
                 self.__ch.writeWait(Frame(cobid, msg), timeout)
         else:
             if not self.__ch.deviceOpen:
+                print(cobid, msg)
                 self.logger.notice('Reopening AnaGate CAN interface')           
             self.__ch.write(cobid, msg, flag)
 

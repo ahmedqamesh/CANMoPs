@@ -177,8 +177,6 @@ class MenuBar(QWidget):
             self.MainWindow.show()
         else:
             pass
-
-
    
     def outputChildWindow(self,state):
         if state:
@@ -189,15 +187,11 @@ class MenuBar(QWidget):
     
     def trendChildWindow(self,state):
         if state:
-
             self.ui.trendChildWindow(self.MainWindow)
             self.MainWindow.show()
         else:
             pass
-            
 
-
-    
     def about(self):
         QMessageBox.about(self,"About",
         """embedding_in_qt5.py example
@@ -210,9 +204,7 @@ class MenuBar(QWidget):
         modified versions may be distributed without limitation.""")
 
     def openWindow(self):
-        self.mainwindow = QMainWindow()
-        self.ui = childWindow.ChildWindow()
-        self.ui.settingChannel(self.mainwindow)
+        self.ui.settingChannel(self.MainWindow)
         self.mainwindow.show()
         
     def clicked(self,q):

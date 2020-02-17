@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
 import analib
 import time
 import logging
@@ -7,8 +8,9 @@ from matplotlib.backends.qt_compat import QtCore, QtWidgets
 from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
-from analysis import controlServer
+from analysis import controlServer, logger, analysis_utils
 from graphics_Utils import  mainWindow
+rootdir = os.path.dirname(os.path.abspath(__file__))
 def test():
     # Define parameters
     NodeIds = server.get_nodeIds()
@@ -22,7 +24,7 @@ def test():
     Byte1, Byte2 = index.to_bytes(2, 'little')
     Byte3 = subindex = 1 
     server.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
-    #write CAN message [read dictionary request from master to node]
+    # write CAN message [read dictionary request from master to node]
     server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
      
     #Response from the node to master
@@ -39,7 +41,7 @@ def test():
     N_PSPP =1
     for PSPP in range(0,N_PSPP): # Each i represents one PSPP
         Pindex = index+PSPP
-        monVals = server.sdoRead(NodeIds[0], Pindex,subindex,3000)
+        monVals = server.sdoRead(NodeIds[0], Pindex, subindex,3000)
         vals = [(monVals >> i * 10) & (2**10 - 1) for i in range(3)]
         print(f'PSPP: {PSPP} ,Temp1: {vals[0]} ,Temp2: {vals[1]} ,Voltage: {vals[2]}')
     # print('Restarting device ...')
