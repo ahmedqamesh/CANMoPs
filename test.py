@@ -23,6 +23,7 @@ def test():
     Byte0= cmd = 0x40 #Defines a read (reads data only from the node) dictionary object in CANOPN standard
     Byte1, Byte2 = index.to_bytes(2, 'little')
     Byte3 = subindex = 1 
+    
     server.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
     # write CAN message [read dictionary request from master to node]
     server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
@@ -35,8 +36,8 @@ def test():
     print('Writing example CAN Expedited read message ...')
     #Example (1): get node Id
     VendorId = server.sdoRead(NodeIds[0], 0x1000,0,1000)
-    print(f'VendorId: {VendorId:03X}')
-     
+    print(VendorId, f'VendorId: {VendorId:03X}')
+    
     #Example (2): print Pspp parameters ( 4 PSPPs)
     N_PSPP =1
     for PSPP in range(0,N_PSPP): # Each i represents one PSPP

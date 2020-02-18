@@ -10,9 +10,6 @@ from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
 from pathlib import Path
-from analysis import logger
-import logging
-from logging.handlers import RotatingFileHandler
 from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
@@ -21,9 +18,13 @@ from analysis import analysis_utils , controlServer
 from analysis import CANopenConstants as coc
 # Third party modules
 from collections import deque, Counter
-import coloredlogs as cl
 import ctypes as ct
+
+from analysis import logger
+import logging
+from logging.handlers import RotatingFileHandler
 import verboselogs
+import coloredlogs as cl
 from canlib import canlib, Frame
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) # This is your Project Root Directory [ALTERNATIVE root = analysis_utils.get_project_root()]
@@ -40,29 +41,28 @@ class ControlServer(object):
         super(ControlServer, self).__init__() # super keyword to call its methods from a subclass:
         
         self.__cnt = Counter()
+        """:obj:`~logging.Logger`: Main logger for this class"""
         # Initialize logger
         verboselogs.install()
         self.logger = logging.getLogger(__name__)
-        """:obj:`~logging.Logger`: Main logger for this class"""
-        self.logger.setLevel(logging.DEBUG)
-        self.controller_logger = logging.getLogger('controller')
-        self.controller_logger.setLevel(logging.WARNING)
+        #self.logger.setLevel(logging.DEBUG)
+        #self.controller_logger = logging.getLogger('controller')
+        #self.controller_logger.setLevel(logging.WARNING)
         #log directory
         if logdir is None:
             logdir = os.path.join(rootdir, 'log')
             if not os.path.exists(logdir):
                     os.makedirs(logdir)
         ts = os.path.join(logdir, time.strftime('%Y-%m-%d_%H-%M-%S_controller_Server.'))
-        self.__fh = RotatingFileHandler(ts + 'log', backupCount=10,
-                                        maxBytes=10 * 1024 * 1024)
-        fmt = logging.Formatter(logformat)
-        fmt.default_msec_format = '%s.%03d'
-        self.__fh.setFormatter(fmt)
+        #self.__fh = RotatingFileHandler(ts + 'log', backupCount=10,
+        #                                maxBytes=10 * 1024 * 1024)
+        #fmt = logging.Formatter(logformat)
+        #fmt.default_msec_format = '%s.%03d'
+        #self.__fh.setFormatter(fmt)
         cl.install(fmt=logformat, level=console_loglevel, isatty=True,milliseconds=True)
-        self.__fh.setLevel(file_loglevel)
+        #self.__fh.setLevel(file_loglevel)
 
         # Read configurations from a file
-        self.logger.notice('Read configuration file ...')
         if config is None:
             conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-8])
         
@@ -73,12 +73,12 @@ class ControlServer(object):
         
         # Interface (Default is AnaGate)
         if interface is None:
+            self.logger.success('Setting the interface to %s' %interface)
             interface = conf['CAN_Interface']['AnaGate']['name']           
         elif interface not in ['Kvaser', 'AnaGate']:
             raise ValueError(f'Possible CAN interfaces are "Kvaser" or '
                              f'"AnaGate" and not "{interface}".')
         self.__interface = interface
-        self.logger.success('Setting the default interface to %s' %interface)
         
         """:obj:`int` : Internal attribute for the bit rate""" 
         if bitrate is None:
@@ -100,15 +100,9 @@ class ControlServer(object):
         if channel is None:
             channel = conf['CAN_Interface']['AnaGate']['channel']
         self.__channel = channel
-        
-        self.logger.success('Loading configurations is Done.....!')
-
         #Opening channel
         #self.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
-
-            
         """Internal attribute for the |CAN| channel"""
-        self.logger.success(str(__name__))
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
         self.__pill2kill = Event()
@@ -116,7 +110,6 @@ class ControlServer(object):
         self.__kvaserLock = Lock()
               
         if GUI is not None:
-            self.logger.notice('Opening a graphical user Interface')
             self.start_graphicalInterface()
         # Scan nodes
         self.__nodeIds = conf["CAN_settings"]["nodeIds"]
@@ -132,6 +125,7 @@ class ControlServer(object):
         """:obj.`dict` : List of ADC trimming bits for each node id."""
          
     def start_graphicalInterface(self):
+        self.logger.notice('Opening a graphical user Interface')
         qapp = QtWidgets.QApplication(sys.argv)
         app = mainWindow.MainWindow()
         app.Ui_ApplicationWindow()
@@ -216,7 +210,6 @@ class ControlServer(object):
     def get_interface(self):
         """:obj:`str` : Vendor of the CAN interface. Possible values are
         ``'Kvaser'`` and ``'AnaGate'``."""
-        #print(self.__interface)
         return self.__interface
     
 
@@ -315,6 +308,7 @@ class ControlServer(object):
         :data:`None`
             In case of errors
         """
+        self.logger.notice("Reading an object via |SDO|")
         SDO_TX =0x580  
         SDO_RX = 0x600
         interface =self.__interface
@@ -332,11 +326,9 @@ class ControlServer(object):
         except CanGeneralError:
             self.cnt['SDO read request timeout'] += 1
             return None
-        
         # Wait for response
         t0 = time.perf_counter()
         messageValid = False
-        print("Reading the dictionary response from the node to the master")
         while time.perf_counter() - t0 < timeout / 1000:
             with self.__lock:
                 for i, (cobid_ret, ret, dlc, flag, t) in \
@@ -381,7 +373,6 @@ class ControlServer(object):
             |SDO| write timeout in milliseconds. When :data:`None` or not
             given an infinit timeout is used.
         """
-        print(cobid, msg)
         if self.__interface == 'Kvaser':
             if timeout is None:
                 timeout = 0xFFFFFFFF
@@ -389,7 +380,6 @@ class ControlServer(object):
                 self.__ch.writeWait(Frame(cobid, msg), timeout)
         else:
             if not self.__ch.deviceOpen:
-                print(cobid, msg)
                 self.logger.notice('Reopening AnaGate CAN interface')           
             self.__ch.write(cobid, msg, flag)
 

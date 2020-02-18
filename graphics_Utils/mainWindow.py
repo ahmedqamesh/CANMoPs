@@ -17,7 +17,7 @@ from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
 from matplotlib.figure import Figure
-from graphics_Utils import dataMonitoring , menuWindow ,logWindow
+from graphics_Utils import dataMonitoring , menuWindow ,logWindow, childWindow
 from analysis import logger, analysis_utils ,controlServer
 from analysis import CANopenConstants as coc
 import binascii
@@ -29,21 +29,30 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 class MainWindow(QMainWindow):
     def __init__(self,parent=None):
         super(MainWindow, self).__init__(parent)
+        self.MainWindow = QMainWindow()
+        self.ui = childWindow.ChildWindow()
         #Load the configuration file
         conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-14])
-        #get info about the application
         self.__appName = conf['Application']['app_name']
         self.__version = conf['Application']['version']
+        self._index_items =  conf["Application"]["index_items"]
         self.__interface= conf['CAN_Interface']['AnaGate']['name']
         self.__interfaceItems = conf['Application']["interface_items"][1:]
         self.__channel = conf['CAN_Interface']['AnaGate']['channel']
         self.__ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate =conf['CAN_Interface']['AnaGate']['bitrate']
         self.__nodeIds = conf["CAN_settings"]["nodeIds"]
-        self.server = controlServer.ControlServer()
-        
+        self.server = controlServer.ControlServer(interface = "AnaGate")
+        #Show a textBox
+        self.textBoxWindow()
+
+    def textBoxWindow(self):
+        self.textBox = QTextEdit()
+        self.textBox.setTabStopWidth(12) 
+        self.textBox.setReadOnly(True)
+    
     def Ui_ApplicationWindow(self):
-        self.menu= menuWindow.MenuBar()
+        self.menu= menuWindow.MenuBar(self)
         self.menu._createMenu(self)
         self.menu._createtoolbar(self)
         self.menu._createStatusBar(self)
@@ -54,22 +63,25 @@ class MainWindow(QMainWindow):
         # call widgets
         self.createProgressBar()
         self.defaultWindow()
-        # Creat a frame in the main menu for the gridlayout
+
+        # Create a frame in the main menu for the gridlayout
         mainFrame = QFrame(self)
         mainFrame.setLineWidth(0.6)
         self.setCentralWidget(mainFrame)
+    
         # SetLayout
         mainLayout = QGridLayout()
         mainLayout.addWidget(self.interfaceComboBox,0,0)
         mainLayout.addWidget(self.connectButton,0,1)
         mainLayout.addLayout(self.GridLayout,1,0)
-        mainLayout.addWidget(self.startButton,1,1)
+        mainLayout.addWidget(self.textBox,2,0)
+        
         #mainLayout.addWidget(self.progressBar,2,0)
         mainFrame.setLayout(mainLayout)
         # 3. Show
         self.show()
         return
-    
+
     def defaultWindow(self):
         __interfaceItems = self.__interfaceItems
         self.interfaceComboBox = QComboBox(self)
@@ -80,11 +92,10 @@ class MainWindow(QMainWindow):
         icon = QIcon()
         icon.addPixmap(QPixmap('graphics_Utils/icons/icon_disconnect.jpg'),  QIcon.Normal, QIcon.Off)
         icon.addPixmap(QPixmap('graphics_Utils/icons/icon_connect.jpg'), QIcon.Normal,  QIcon.On)
+        
         self.connectButton.setIcon(icon)
         self.connectButton.setCheckable(True)
         self.connectButton.clicked.connect(self.set_connect) 
-        
-        
         
         self.GridLayout =QGridLayout()
         nodeLabel = QLabel("NodeId", self)
@@ -96,15 +107,19 @@ class MainWindow(QMainWindow):
         
         
         indexLabel = QLabel("Index", self)
-        indexLabel.setText("        Index")
-        indextextbox = QLineEdit("0x2201", self)
+        indexLabel.setText("   Index   ")
+        indextextbox = QLineEdit(self._index_items[0], self)
         indextextbox.textChanged.connect(self.set_index)
         
         subIndexLabel = QLabel("    SubIndex", self)
         subIndexLabel.setText("SubIndex")
         subIndextextbox = QLineEdit("1", self)
         subIndextextbox.textChanged.connect(self.set_subIndex)
-                        
+                
+        self.startButton = QPushButton("")
+        self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
+        self.startButton.clicked.connect(self.send_sdo_can)                 
+                
         self.GridLayout.addWidget(nodeLabel,0,0)
         self.GridLayout.addWidget(nodeComboBox,1,0)
         
@@ -113,11 +128,8 @@ class MainWindow(QMainWindow):
         
         self.GridLayout.addWidget(subIndexLabel,0,2)
         self.GridLayout.addWidget(subIndextextbox,1,2)       
-
-        self.startButton = QPushButton("")
-        self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
-        self.startButton.clicked.connect(self.send_sdo_can) 
-        
+        self.GridLayout.addWidget(self.startButton,1,3)
+    
     def createProgressBar(self):
         self.progressBar = QProgressBar()
         self.progressBar.setRange(0, 10000)
@@ -133,6 +145,14 @@ class MainWindow(QMainWindow):
         maxVal = self.progressBar.maximum()
         self.progressBar.setValue(curVal + (maxVal - curVal) / 100)
 
+
+    def outputChildWindow(self,state= None):
+        if state:
+            self.ui.outputChildWindow(self.MainWindow, comunication_object = self._comunication_object)
+            self.MainWindow.show()
+        else:
+            self.MainWindow.close()
+           
     def set_nodeId(self,x):
         self.__nodeId =x
         
@@ -165,12 +185,41 @@ class MainWindow(QMainWindow):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex())
         nodeId = self.__nodeIds[0]
-        msg = self.server.sdoRead(nodeId, index, subIndex,3000)
-        self.print_can_message(msg)
         
-    def print_can_message(self,msg):
-        print(f'VendorId: {msg:03X}')
-      
+        response = self.server.sdoRead(nodeId, index, subIndex,3000)
+        self.print_sdo_can(nodeId =nodeId, index = index,    subIndex = subIndex,
+                           response_from_node = response )
+
+    def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
+        # printing the read message with cobid = SDO_RX + nodeId
+        MAX_DATABYTES =8
+        msg = [0 for i in range(MAX_DATABYTES)]
+        msg[1], msg[2] = index.to_bytes(2, 'little')
+        msg[3] = subIndex
+        msg[0] = 0x40
+        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(msg))
+        #printing response 
+        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(response_from_node))
+        #print decoded response
+        decoded_response = f'{response_from_node:03X}'
+        self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
+        
+        
+                
+    def set_textBox_message(self, comunication_object = None, msg ="This is a message"):
+        if comunication_object == "SDO_RX"  :   
+            color = QColor("green")
+            mode    =   "W    :"
+        if comunication_object == "SDO_TX"  :   
+            color = QColor("red") 
+            mode    =   "R    :"
+        if comunication_object == "Decoded" :   
+            color = QColor("blue")
+            mode    =   "D    :"
+        self.textBox.setTextColor(color)
+        self.textBox.append(mode+msg)
+    
+    
 if __name__ == "__main__":
     pass
 

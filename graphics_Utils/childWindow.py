@@ -23,7 +23,8 @@ class ChildWindow(QWidget):
        self.__Bytes =  ["40","0","34","1","0","0","0","0"] 
        self.__cobid = "608"
        self.__dlc = "8"
-       self.server = controlServer.ControlServer()
+       self.server = controlServer.ControlServer(interface ="AnaGate")
+    
     def canMessageChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("canMessageChildWindow")
         ChildWindow.setWindowTitle("CAN Message")
@@ -111,7 +112,7 @@ class ChildWindow(QWidget):
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
     
-    def outputChildWindow(self, ChildWindow):
+    def outputChildWindow(self, ChildWindow, comunication_object ="Normal"):
         ChildWindow.setObjectName("OutputWindow")
         ChildWindow.setWindowTitle("Output Window")
         ChildWindow.resize(600, 600) #w*h
@@ -119,9 +120,9 @@ class ChildWindow(QWidget):
         logframe.setLineWidth(0.6)
         ChildWindow.setCentralWidget(logframe)
         self.WindowGroupBox = QGroupBox("")
-        logEdit= logWindow.LoggerDialog()
+        logTextBox = logWindow.QTextEditLogger(ChildWindow,comunication_object = comunication_object)
         logLayout = QVBoxLayout()
-        logLayout.addWidget(logEdit)
+        logLayout.addWidget(logTextBox.text_edit_widget)
         self.WindowGroupBox.setLayout(logLayout)
         logframe.setLayout(logLayout) 
         

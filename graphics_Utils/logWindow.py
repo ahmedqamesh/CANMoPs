@@ -3,50 +3,50 @@ from typing import *
 from PyQt5 import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSlot
+from matplotlib.backends.qt_compat import QtCore, QtWidgets
+#from analysis import logger
 import logging
+from logging.handlers import RotatingFileHandler
+import verboselogs
+import coloredlogs as cl
+
 class QTextEditLogger(logging.Handler):
-    def __init__(self, parent):
-        super().__init__()
-        self.widget = QtWidgets.QPlainTextEdit(parent)
-        self.widget.setReadOnly(True)
-        self.widget.setStyleSheet("background-color: white;")
-        policy = self.widget.sizePolicy()
-        policy.setVerticalStretch(1)
-        self.widget.setSizePolicy(policy)
+    def __init__(self, parent =None,
+                 loglevel = logging.DEBUG, 
+                 logformat="%(asctime)s - %(message)s",
+                 comunication_object = None):
+        super().__init__() 
+        color = self.set_object_color(comunication_object)        
+       
+        self.text_edit_widget = QPlainTextEdit()
+        self.text_edit_widget.setReadOnly(True)
+        self.text_edit_widget.setStyleSheet(color)
+
+        # create logger
+        logger = logging.getLogger()
+        logger.setLevel(loglevel) # Controlling the logging level
+
+        # create formatter
+        formatter = logging.Formatter(logformat)
+        
+        self.setFormatter(formatter)
+        logger.addHandler(self)
+
     def emit(self, record):
         msg = self.format(record)
-        text = "Please subscribe the channel and like the videos"
-        #self.widget.appendPlainText(text)
-        self.widget.appendPlainText(msg)
+        self.text_edit_widget.appendPlainText(msg)
         
-
-class LoggerDialog(QtWidgets.QDialog, QtWidgets.QPlainTextEdit):
-    def __init__(self, parent=None, period = 1000):
-        super().__init__(parent)
-        logTextBox = QTextEditLogger(self)
-        logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logging.getLogger().addHandler(logTextBox)
-        # You can control the logging level
-        logging.getLogger().setLevel(logging.DEBUG)
-        self.initiate_timer(period=period)
-
-        logLayout = QtWidgets.QVBoxLayout()
-        logLayout.addWidget(logTextBox.widget)
-        self.setLayout(logLayout)
-
-        self.show()
- 
-    def initiate_timer(self,period=None):    
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.test)
-        timer.start(period)
-           
-    def test(self):
-        msg
-        logging.debug("msg")
-        #logging.info('something to remember')
-        #logging.warning('that\'s not right')
-        #logging.error('foobar')
+    def set_object_color(self, comunication_object):
+        if comunication_object == "SDO_TX":
+            color =  "color: #336600;"
+        if comunication_object == "SDO_RX":
+            color =  "color: #CC0066;"
+            
+        if comunication_object == "decoded":
+            color =  "color: #E4DFA3;"
+        else:
+            color ="color: #000000;"
+        return color
 
 if __name__ == "__main__":
     pass
