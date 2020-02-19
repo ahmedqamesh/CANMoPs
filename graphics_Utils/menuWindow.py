@@ -16,6 +16,7 @@ class MenuBar(mainWindow.MainWindow):
         super(MenuBar,self).__init__(parent)
         self.MainWindow = QMainWindow()
         self.textBox = mainWindow.MainWindow().textBox
+        
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
@@ -164,7 +165,7 @@ class MenuBar(mainWindow.MainWindow):
                 
         mops_action = QAction(QIcon('graphics_Utils/icons/icon_mops.png'), '&MoPs', mainwindow)
         mops_action.setStatusTip('MoPs Interface') # show when move mouse to the icon
-        mops_action.triggered.connect(self.clicked)
+        mops_action.triggered.connect(self.deviceChildWindow)
            
         toolbar.addAction(new_action)
         toolbar.addAction(open_action)
@@ -201,7 +202,12 @@ class MenuBar(mainWindow.MainWindow):
             self.MainWindow.show()
         else:
             self.MainWindow.close()
-
+    
+    def deviceChildWindow(self):
+        self.ui.deviceChildWindow(self.MainWindow)
+        self.MainWindow.show()
+            
+        
     def about(self):
         QMessageBox.about(self,"About",
         """embedding_in_qt5.py example

@@ -27,22 +27,28 @@ import verboselogs
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
-    def __init__(self,parent=None):
+    def __init__(self,parent=None, device_config = ["MoPS_daq_cfg.yml"]):
         super(MainWindow, self).__init__(parent)
-        self.MainWindow = QMainWindow()
-        self.ui = childWindow.ChildWindow()
-        #Load the configuration file
-        conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-14])
-        self.__appName = conf['Application']['app_name']
-        self.__version = conf['Application']['version']
-        self._index_items =  conf["Application"]["index_items"]
-        self.__interface= conf['CAN_Interface']['AnaGate']['name']
-        self.__interfaceItems = conf['Application']["interface_items"][1:]
-        self.__channel = conf['CAN_Interface']['AnaGate']['channel']
-        self.__ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
-        self.__bitrate =conf['CAN_Interface']['AnaGate']['bitrate']
-        self.__nodeIds = conf["CAN_settings"]["nodeIds"]
+        #Start with default settings
+        config_dir = "config/"
         self.server = controlServer.ControlServer(interface = "AnaGate")
+        self.__interfaceItems = self.server.get_interfaceItems()
+        self.__ipAddress = self.server.get_ipAddress()     
+        self.__interface= self.server.get_interface() 
+        self.__bitrate =self.server.get_bitrate()  
+        self.__channel = self.server.get_channelNumber()   
+        #Load the configuration file
+        conf = analysis_utils.open_yaml_file(file =config_dir+"main_cfg.yml",directory =rootdir[:-14])
+        if device_config is not None: 
+            for device in device_config: 
+                dev = analysis_utils.open_yaml_file(file =config_dir+device,directory =rootdir[:-14])
+            self.__appName          = dev["Application"]["device_name"] 
+            self.__version          = dev['Application']['device_version']
+            self.__icon_dir          = dev["Application"]["icon_dir"]
+            self.__nodeIds          = dev["Application"]["nodeIds"]
+            self.__index_items      = dev["Application"]["index_items"]
+            self.__subindex_items   = dev["Application"]["subindex_items"]
+            self.__description_items      = dev["Application"]["description_items"]
         #Show a textBox
         self.textBoxWindow()
 
@@ -108,8 +114,8 @@ class MainWindow(QMainWindow):
         
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
-        indextextbox = QLineEdit(self._index_items[0], self)
-        indextextbox.textChanged.connect(self.set_index)
+        indexTextBox = QLineEdit(self.__index_items[0], self)
+        indexTextBox.textChanged.connect(self.set_index)
         
         subIndexLabel = QLabel("    SubIndex", self)
         subIndexLabel.setText("SubIndex")
@@ -124,7 +130,7 @@ class MainWindow(QMainWindow):
         self.GridLayout.addWidget(nodeComboBox,1,0)
         
         self.GridLayout.addWidget(indexLabel,0,1)
-        self.GridLayout.addWidget(indextextbox,1,1)
+        self.GridLayout.addWidget(indexTextBox,1,1)
         
         self.GridLayout.addWidget(subIndexLabel,0,2)
         self.GridLayout.addWidget(subIndextextbox,1,2)       
@@ -144,14 +150,6 @@ class MainWindow(QMainWindow):
         
         maxVal = self.progressBar.maximum()
         self.progressBar.setValue(curVal + (maxVal - curVal) / 100)
-
-
-    def outputChildWindow(self,state= None):
-        if state:
-            self.ui.outputChildWindow(self.MainWindow, comunication_object = self._comunication_object)
-            self.MainWindow.show()
-        else:
-            self.MainWindow.close()
            
     def set_nodeId(self,x):
         self.__nodeId =x
@@ -168,6 +166,12 @@ class MainWindow(QMainWindow):
     def set_connect(self):
         interface = self.get_interface()
         self.server.start_channelConnection(interface = interface, ipAddress = self.__ipAddress, channel = self.__channel, baudrate = self.__bitrate)
+    
+    def get_index_items(self):
+        return self.__index_items
+
+    def get_subindex_items(self):
+        return self.__subindex_items
         
     def get_interface(self): 
         return self.__interface
@@ -180,7 +184,12 @@ class MainWindow(QMainWindow):
     
     def get_subIndex(self):
         return self.__subIndex
-        
+    
+    def get_description_items(self):
+        return self.__description_items   
+      
+    def get_icon_dir(self):
+        return self__icon_dir
     def send_sdo_can(self):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex())
@@ -203,10 +212,9 @@ class MainWindow(QMainWindow):
         #print decoded response
         decoded_response = f'{response_from_node:03X}'
         self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
-        
-        
-                
+
     def set_textBox_message(self, comunication_object = None, msg ="This is a message"):
+       
         if comunication_object == "SDO_RX"  :   
             color = QColor("green")
             mode    =   "W    :"

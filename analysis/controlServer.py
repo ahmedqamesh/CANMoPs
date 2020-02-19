@@ -39,10 +39,9 @@ class ControlServer(object):
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
         super(ControlServer, self).__init__() # super keyword to call its methods from a subclass:
-        
+        config_dir = "config/"
         self.__cnt = Counter()
         """:obj:`~logging.Logger`: Main logger for this class"""
-        # Initialize logger
         verboselogs.install()
         self.logger = logging.getLogger(__name__)
         #self.logger.setLevel(logging.DEBUG)
@@ -64,17 +63,23 @@ class ControlServer(object):
 
         # Read configurations from a file
         if config is None:
-            conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-8])
+            conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-8])
+        self._index_items       =   conf["default_values"]["index_items"]
+        self.__interfaceItems   =   conf['default_values']["interface_items"]        
+        self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
+        self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
+        self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
+        self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
         
-        #get info about the application
-        self.__appName = conf['Application']['app_name']
-        self.__version = conf['Application']['version']
-        self.__interfaceItems =conf['Application']["interface_items"]
         
+        """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently present on the bus."""
+        self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
+
+                
         # Interface (Default is AnaGate)
         if interface is None:
             self.logger.success('Setting the interface to %s' %interface)
-            interface = conf['CAN_Interface']['AnaGate']['name']           
+            interface = self.__interface     
         elif interface not in ['Kvaser', 'AnaGate']:
             raise ValueError(f'Possible CAN interfaces are "Kvaser" or '
                              f'"AnaGate" and not "{interface}".')
@@ -82,24 +87,23 @@ class ControlServer(object):
         
         """:obj:`int` : Internal attribute for the bit rate""" 
         if bitrate is None:
-            bitrate = conf['CAN_Interface']['AnaGate']['bitrate']
-        #bitrate = self._parseBitRate(bitrate)
-               
+            bitrate = self.__bitrate 
         self.__bitrate = bitrate
-        #ipAddress
-        if ipAddress is None:
-            ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
         
+        """:obj:`int` : Internal attribute for the IP Address"""  
+        if ipAddress is None:
+            ipAddress = self.__ipAddress
         self.__ipAddress = ipAddress
         
-        
+        """:obj:`int` : Internal attribute for the channel index"""
+        if channel is None:
+            channel = self.__channel
+        self.__channel = channel
+                
         self.__ch = None 
         self.__busOn = False  
 
-        """:obj:`int` : Internal attribute for the channel index"""
-        if channel is None:
-            channel = conf['CAN_Interface']['AnaGate']['channel']
-        self.__channel = channel
+        
         #Opening channel
         #self.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
         """Internal attribute for the |CAN| channel"""
@@ -108,13 +112,11 @@ class ControlServer(object):
         self.__pill2kill = Event()
         self.__lock = Lock()
         self.__kvaserLock = Lock()
-              
+          
         if GUI is not None:
             self.start_graphicalInterface()
-        # Scan nodes
-        self.__nodeIds = conf["CAN_settings"]["nodeIds"]
-        """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently
-        present on the bus."""    
+
+           
         self.__myDCs = {}
         """:obj:`list` : |controller| Object representation of all |DCS| Controllers
         that are currently on the |CAN| bus"""
@@ -168,7 +170,7 @@ class ControlServer(object):
     def set_nodeIds(self,x):
         self.__nodeIds =x
     
-    def set_channel(self,x):
+    def set_channelNumber(self,x):
         self.__channel = x
     
     def set_ipAddress(self,x):
@@ -177,12 +179,6 @@ class ControlServer(object):
     def set_bitrate(self,x):
         self.__bitrate = x
 
-    def get_appName(self):
-        return self.__appName 
-    
-    def get_version(self):
-        return self.__version
-    
         
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
@@ -197,6 +193,7 @@ class ControlServer(object):
     def get_bitrate(self):
         return self.__bitrate
 
+    
     def get_ipAddress(self):
         """:obj:`str` : Network address of the AnaGate partner. Only used for
         AnaGate CAN interfaces."""
@@ -204,7 +201,7 @@ class ControlServer(object):
             raise AttributeError('You are using a Kvaser CAN interface!')
         return self.__ipAddress    
 
-    def get_interface_items(self):
+    def get_interfaceItems(self):
         return self.__interfaceItems
     
     def get_interface(self):
@@ -391,7 +388,6 @@ class ControlServer(object):
         the :class:`~threading.Event` :attr:`pill2kill` and is therefore
         designed to be used as a :class:`~threading.Thread`.
         """
-        self.logger.notice('Starting pulling of CAN messages')
         while not self.__pill2kill.is_set():
             try:
                 if self.__interface == 'Kvaser':

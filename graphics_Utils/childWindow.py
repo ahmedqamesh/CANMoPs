@@ -3,27 +3,35 @@ from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
-from graphics_Utils import dataMonitoring ,logWindow
+from graphics_Utils import mainWindow, dataMonitoring ,logWindow
 from analysis import logger, analysis_utils ,controlServer
 import numpy as np
 import os
 import binascii
+from analysis import logger
+import logging
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class ChildWindow(QWidget):  
     def __init__(self, parent=None):
        super(ChildWindow, self).__init__(parent) 
-       conf = analysis_utils.open_yaml_file(file ="MoPS_daq_cfg.yml",directory =rootdir[:-14])
-       self.__appName = conf['Application']['app_name']
-       self.__version = conf['Application']['version']
-       self.__interface= conf['CAN_Interface']['AnaGate']['name']
-       self.__interfaceItems = conf['Application']["interface_items"]
-       self.__channel = conf['CAN_Interface']['AnaGate']['channel']
-       self.__ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
-       self.__bitrate =conf['CAN_Interface']['AnaGate']['bitrate']
+       self.server = controlServer.ControlServer(interface ="AnaGate")
+       self.main = mainWindow.MainWindow()
+       self.__interfaceItems = self.server.get_interfaceItems()
+       self.__ipAddress = self.server.get_ipAddress()
+       self.__nodeIds = self.server.get_nodeIds()       
+       self.__interface= self.server.get_interface() 
+       self.__bitrate =self.server.get_bitrate()
+       self.__channel = self.server.get_channelNumber()
+       
+       self.__index_items = self.main.get_index_items()
+       self.__subindex_items = self.main.get_subindex_items()
+       self.__description_items = self.main.get_description_items()
+       
+       #set default settings
        self.__Bytes =  ["40","0","34","1","0","0","0","0"] 
        self.__cobid = "608"
        self.__dlc = "8"
-       self.server = controlServer.ControlServer(interface ="AnaGate")
+       self.logger = logging.getLogger(__name__)
     
     def canMessageChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("canMessageChildWindow")
@@ -64,7 +72,7 @@ class ChildWindow(QWidget):
         
         FirstGridLayout.addWidget(dlcLabel,2,0)
         FirstGridLayout.addWidget(dlctextbox,2,1)  
-       #self.outLabel.setStyleSheet("background-color: white; border: 2px inset black;")# min-height: 200px;")        
+             
         FirstGroupBox.setLayout(FirstGridLayout) 
         
         SecondGroupBox = QGroupBox("Message Data")
@@ -140,7 +148,73 @@ class ChildWindow(QWidget):
         plotLayout.addWidget(Fig)
         self.WindowGroupBox.setLayout(plotLayout)
         logframe.setLayout(plotLayout) 
-
+        
+    def deviceChildWindow(self,ChildWindow):
+        ChildWindow.setObjectName("OutputWindow")
+        ChildWindow.setWindowTitle("Output Window")
+        ChildWindow.adjustSize()
+        logframe = QFrame(ChildWindow)
+        logframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(logframe)
+        self.WindowGroupBox = QGroupBox("")
+        self.GridLayout =QGridLayout()
+        nodeLabel = QLabel("NodeId", self)
+        nodeLabel.setText("NodeId ")
+        nodeItems =list(map(str, self.__nodeIds))
+        nodeComboBox = QComboBox(self)
+        for item in nodeItems: nodeComboBox.addItem(item)
+        nodeComboBox.activated[str].connect(self.main.set_nodeId)
+        
+        
+        indexLabel = QLabel("Index", self)
+        indexLabel.setText("   Index   ")
+        self.IndexListBox = QListWidget(self)
+        indexItems = self.__index_items 
+        for item in indexItems: self.IndexListBox.addItem(item)
+        self.IndexListBox.currentItemChanged.connect(self.main.set_index)
+        self.IndexListBox.currentItemChanged.connect(self.set_selected_description_item)
+                 
+        subIndexLabel = QLabel("    SubIndex", self)
+        subIndexLabel.setText("SubIndex")
+        subIndexListBox = QListWidget(self)
+        subIndexItems = self.__subindex_items
+        for item in subIndexItems: subIndexListBox.addItem(item)
+        subIndexListBox.currentItemChanged.connect(self.main.set_subIndex)  
+        VLayout =QVBoxLayout()
+        self.indexTextBox = QTextEdit("", self)
+        #indexTextBox = QPlainTextEdit("Info", self)
+        self.indexTextBox.setStyleSheet("background-color: white; border: 2px inset black; min-height: 150px; min-width: 400px;")
+        self.indexTextBox.LineWrapMode(1)        
+        self.startButton = QPushButton("")
+        self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
+        #self.startButton.clicked.connect(self.send_sdo_can)                 
+        VLayout.addWidget(self.indexTextBox)
+        VLayout.addWidget(self.startButton)
+        self.GridLayout.addWidget(nodeLabel,0,0)
+        self.GridLayout.addWidget(nodeComboBox,1,0)
+        
+        self.GridLayout.addWidget(indexLabel,0,1)
+        self.GridLayout.addWidget(self.IndexListBox,1,1)
+        
+        self.GridLayout.addWidget(subIndexLabel,0,2)
+        self.GridLayout.addWidget(subIndexListBox,1,2)
+        self.GridLayout.addLayout(VLayout,1,3)
+        
+        self.WindowGroupBox.setLayout(self.GridLayout)
+        logframe.setLayout(self.GridLayout)
+    
+    def set_selected_description_item(self):
+        index = self.main.get_index
+        subindex = self.main.get_subIndex
+                
+        selectedItem = self.IndexListBox.selectedItems()
+        if len(selectedItem) > 0:
+            currentItem = self.IndexListBox.currentItem().text()
+            currentItem_index = self.IndexListBox.currentRow()
+            #self.IndexListBox.setPlainText(self.__description_items[currentItem_index])   
+            self.indexTextBox.setText(self.__description_items[currentItem_index])   
+            #indexTextBox.append(self.__description_items[currentItem_index])      
+        
     def canSettingsChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("CANSettings")
         ChildWindow.setWindowTitle("CAN Settings")
@@ -306,21 +380,12 @@ class ChildWindow(QWidget):
             SubSecondGridLayout.addWidget(firstComboBox,0,1)
         else:
             pass   
-        
         SubSecondGridLayout.addWidget(firstLabel,0,0)
         SubSecondGridLayout.addWidget(secondLabel,1,0)
         SubSecondGridLayout.addWidget(secondComboBox,1,1)
         SubSecondGridLayout.addWidget(thirdLabel,2,0)
         SubSecondGridLayout.addWidget(thirdComboBox,2,1)
         self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
-        
-    def deleteGridWidget(self, index):
-        item = self.sa_grid.itemAt(index)
-        if item is not None:
-            widget = item.widget()
-            if widget is not None:
-                self.sa_grid.removeWidget(widget)
-                widget.deleteLater()
 
     def _createStatusBar(self,childwindow):
         status = QStatusBar()
@@ -360,26 +425,34 @@ class ChildWindow(QWidget):
         self.server.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
 
     def set_all(self):
+        self.logger.success('========Setting CAN configurations=======')
         self.server.set_interface(self.__interface)
         self.server.set_ipAddress(self.__ipAddress)
         self.server.set_bitrate(self.__bitrate)
     
     def send_can(self):
         cobid = int(self.get_cobid())
-        bytes =list( map(int, self.get_Bytes()))
+        bytes =list(map(int, self.get_Bytes()))
+        #Send the can Message
+        self.main.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
         self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
+        # receive the message
+        self.read_can()
+        
+    def read_can(self):
+        cobid, data, dlc, flag, t = self.server.readCanMessages()
+        self.main.set_textBox_message(comunication_object = "SDO_TX", msg =str(data))
+    
     #Get functions    
-    def get_appName(self):
-        return self.__appName 
-    
-    def get_version(self):
-        return self.__version
-    
+    def get_corresponding_description_item(self, i):
+        return notes_items[i]
+        
     def get_channel(self):
         return self.__channel
     
     def get_cobid(self):
         return  self.__cobid
+    
     def get_dlc(self):
         return self.__dlc
 
