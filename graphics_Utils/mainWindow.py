@@ -27,7 +27,7 @@ import verboselogs
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
-    def __init__(self,parent=None, device_config = ["MoPS_daq_cfg.yml"]):
+    def __init__(self,parent=None, device_config = ["PSPP_cfg.yml"]):
         super(MainWindow, self).__init__(parent)
         #Start with default settings
         config_dir = "config/"
@@ -38,7 +38,6 @@ class MainWindow(QMainWindow):
         self.__bitrate =self.server.get_bitrate()  
         self.__channel = self.server.get_channelNumber()   
         #Load the configuration file
-        conf = analysis_utils.open_yaml_file(file =config_dir+"main_cfg.yml",directory =rootdir[:-14])
         if device_config is not None: 
             for device in device_config: 
                 dev = analysis_utils.open_yaml_file(file =config_dir+device,directory =rootdir[:-14])
@@ -46,9 +45,9 @@ class MainWindow(QMainWindow):
             self.__version          = dev['Application']['device_version']
             self.__icon_dir          = dev["Application"]["icon_dir"]
             self.__nodeIds          = dev["Application"]["nodeIds"]
-            self.__index_items      = dev["Application"]["index_items"]
-            self.__subindex_items   = dev["Application"]["subindex_items"]
-            self.__description_items      = dev["Application"]["description_items"]
+            self.__dictionary_items = dev["Application"]["index_items"]
+            self.__index_items = list(self.__dictionary_items.keys())
+            self.__subIndex = "1"
         #Show a textBox
         self.textBoxWindow()
 
@@ -169,32 +168,33 @@ class MainWindow(QMainWindow):
     
     def get_index_items(self):
         return self.__index_items
-
-    def get_subindex_items(self):
-        return self.__subindex_items
-        
-    def get_interface(self): 
-        return self.__interface
-        
+               
     def get_index(self):
         return self.__index
 
-    def get_nodeId(self):
-        return self.__nodeId
-    
     def get_subIndex(self):
         return self.__subIndex
+          
+    def get_dictionary_items(self):
+        return self.__dictionary_items  
     
-    def get_description_items(self):
-        return self.__description_items   
-      
+    def get_interface(self): 
+        return self.__interface
+       
+    def get_nodeId(self):
+        return self.__nodeId
+          
     def get_icon_dir(self):
-        return self__icon_dir
+        return self.__icon_dir
+    
+    def get_appName(self):
+        return self.__appName
+    
     def send_sdo_can(self):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex())
         nodeId = self.__nodeIds[0]
-        
+        print(type(nodeId))
         response = self.server.sdoRead(nodeId, index, subIndex,3000)
         self.print_sdo_can(nodeId =nodeId, index = index,    subIndex = subIndex,
                            response_from_node = response )

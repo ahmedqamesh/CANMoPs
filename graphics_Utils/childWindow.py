@@ -3,6 +3,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
+from PyQt5 import QtGui
 from graphics_Utils import mainWindow, dataMonitoring ,logWindow
 from analysis import logger, analysis_utils ,controlServer
 import numpy as np
@@ -14,7 +15,7 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 class ChildWindow(QWidget):  
     def __init__(self, parent=None):
        super(ChildWindow, self).__init__(parent) 
-       self.server = controlServer.ControlServer(interface ="AnaGate")
+       self.server = controlServer.ControlServer()
        self.main = mainWindow.MainWindow()
        self.__interfaceItems = self.server.get_interfaceItems()
        self.__ipAddress = self.server.get_ipAddress()
@@ -23,10 +24,8 @@ class ChildWindow(QWidget):
        self.__bitrate =self.server.get_bitrate()
        self.__channel = self.server.get_channelNumber()
        
+       self.__dictionary_items =self.main.get_dictionary_items()
        self.__index_items = self.main.get_index_items()
-       self.__subindex_items = self.main.get_subindex_items()
-       self.__description_items = self.main.get_description_items()
-       
        #set default settings
        self.__Bytes =  ["40","0","34","1","0","0","0","0"] 
        self.__cobid = "608"
@@ -158,28 +157,38 @@ class ChildWindow(QWidget):
         ChildWindow.setCentralWidget(logframe)
         self.WindowGroupBox = QGroupBox("")
         self.GridLayout =QGridLayout()
+        firstVLayout =QVBoxLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
         nodeItems =list(map(str, self.__nodeIds))
         nodeComboBox = QComboBox(self)
         for item in nodeItems: nodeComboBox.addItem(item)
         nodeComboBox.activated[str].connect(self.main.set_nodeId)
+        icon = QLabel(self)
+        pixmap = QPixmap(self.main.get_icon_dir())
+        icon.setPixmap(pixmap.scaled(100,100))
         
+        device_title = QLabel("    device", self)
+        newfont = QFont("Times", 12, QtGui.QFont.Bold)
+        device_title.setFont(newfont)
+        device_title.setText("         "+self.main.get_appName())
+        
+        firstVLayout.addWidget(nodeComboBox)
+        firstVLayout.addWidget(icon)
+        firstVLayout.addWidget(device_title)
         
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
         self.IndexListBox = QListWidget(self)
-        indexItems = self.__index_items 
+        indexItems = self.__index_items
         for item in indexItems: self.IndexListBox.addItem(item)
-        self.IndexListBox.currentItemChanged.connect(self.main.set_index)
-        self.IndexListBox.currentItemChanged.connect(self.set_selected_description_item)
-                 
+        self.IndexListBox.currentItemChanged.connect(self.set_selected_description_item)  
+        self.IndexListBox.currentItemChanged.connect(self.set_selected_subIndex_item)
         subIndexLabel = QLabel("    SubIndex", self)
         subIndexLabel.setText("SubIndex")
-        subIndexListBox = QListWidget(self)
-        subIndexItems = self.__subindex_items
-        for item in subIndexItems: subIndexListBox.addItem(item)
-        subIndexListBox.currentItemChanged.connect(self.main.set_subIndex)  
+        self.subIndexListBox = QListWidget(self)
+        self.subIndexListBox.currentItemChanged.connect(self.set_selected_description_item)  
+        
         VLayout =QVBoxLayout()
         self.indexTextBox = QTextEdit("", self)
         #indexTextBox = QPlainTextEdit("Info", self)
@@ -187,33 +196,45 @@ class ChildWindow(QWidget):
         self.indexTextBox.LineWrapMode(1)        
         self.startButton = QPushButton("")
         self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
-        #self.startButton.clicked.connect(self.send_sdo_can)                 
+        self.startButton.clicked.connect(self.main.send_sdo_can)                 
         VLayout.addWidget(self.indexTextBox)
         VLayout.addWidget(self.startButton)
+        
         self.GridLayout.addWidget(nodeLabel,0,0)
-        self.GridLayout.addWidget(nodeComboBox,1,0)
+        self.GridLayout.addLayout(firstVLayout,1,0)
         
         self.GridLayout.addWidget(indexLabel,0,1)
         self.GridLayout.addWidget(self.IndexListBox,1,1)
         
         self.GridLayout.addWidget(subIndexLabel,0,2)
-        self.GridLayout.addWidget(subIndexListBox,1,2)
+        self.GridLayout.addWidget(self.subIndexListBox,1,2)
         self.GridLayout.addLayout(VLayout,1,3)
         
         self.WindowGroupBox.setLayout(self.GridLayout)
         logframe.setLayout(self.GridLayout)
     
-    def set_selected_description_item(self):
-        index = self.main.get_index
-        subindex = self.main.get_subIndex
-                
-        selectedItem = self.IndexListBox.selectedItems()
-        if len(selectedItem) > 0:
-            currentItem = self.IndexListBox.currentItem().text()
-            currentItem_index = self.IndexListBox.currentRow()
-            #self.IndexListBox.setPlainText(self.__description_items[currentItem_index])   
-            self.indexTextBox.setText(self.__description_items[currentItem_index])   
-            #indexTextBox.append(self.__description_items[currentItem_index])      
+    def set_selected_subIndex_item(self):
+        index = self.IndexListBox.currentItem().text()
+        self.main.set_index(index) 
+        dictionary = self.__dictionary_items
+        subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary = dictionary, index = index))
+        self.subIndexListBox.clear()
+        for item in subIndexItems: self.subIndexListBox.addItem(item)
+        
+    def set_selected_description_item(self):        
+        dictionary = self.__dictionary_items
+        selected_Index_Item = self.IndexListBox.selectedItems()
+        selected_subIndex_Item = self.subIndexListBox.selectedItems()
+        try:
+            index = self.IndexListBox.currentItem().text()
+            index_description_items = analysis_utils.get_index_description_yaml(dictionary =dictionary , index = index)          
+            subindex = self.subIndexListBox.currentItem().text()
+            self.main.set_subIndex(subindex)
+            subindex_description_items  = analysis_utils.get_subindex_description_yaml(dictionary = dictionary, index = index,  subindex = subindex)
+            description_text = index_description_items+"<br>"+subindex_description_items
+            self.indexTextBox.setText(description_text)   
+        except Exception:
+            print("No No")    
         
     def canSettingsChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("CANSettings")

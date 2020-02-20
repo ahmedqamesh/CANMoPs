@@ -155,7 +155,24 @@ def open_h5_file(outname=None, directory=None):
     with tb.open_file(filename, 'r') as in_file:
         data = in_file.root.data[:]
     return data
-    
+
+
+def get_subindex_description_yaml(dictionary = None, index =None, subindex = None):
+    index_item = [dictionary[i] for i in [index] if i in dictionary]
+    subindex_items = index_item[0]["subindex_items"]
+    subindex_description_items = subindex_items[subindex]
+    return subindex_description_items
+
+def get_index_description_yaml(dictionary = None, index =None):
+    index_item = [dictionary[i] for i in [index] if i in dictionary]
+    index_description_items = index_item[0]["description_items"]
+    return index_description_items
+            
+def get_subindex_yaml(dictionary = None, index =None):
+    index_item = [dictionary[i] for i in [index] if i in dictionary]
+    subindex_items = index_item[0]["subindex_items"]
+    return subindex_items.keys()
+       
 def plot_spline_masking(calibrated_file=False, PdfPages=PdfPages):
     with tb.open_file(calibrated_file, 'r') as in_file:
         spline_mask = in_file.root.configuration.spline_mask[:]
