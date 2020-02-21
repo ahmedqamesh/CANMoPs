@@ -16,7 +16,7 @@ class MenuBar(mainWindow.MainWindow):
         super(MenuBar,self).__init__(parent)
         self.MainWindow = QMainWindow()
         self.textBox = mainWindow.MainWindow().textBox
-        
+        self.ui = childWindow.ChildWindow()
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
@@ -25,9 +25,7 @@ class MenuBar(mainWindow.MainWindow):
         self._viewMenu(menuBar, mainwindow)
         self._settingsMenu(menuBar, mainwindow)
         self._helpMenu(menuBar, mainwindow)
-        
-        self.ui = childWindow.ChildWindow()
-    
+
     def _createtoolbar(self,mainwindow):
         toolbar = mainwindow.addToolBar("tools")
         self._toolBar(toolbar,mainwindow)
@@ -162,10 +160,6 @@ class MenuBar(mainWindow.MainWindow):
         stop_action.setStatusTip('Stop program') # show when move mouse to the icon
         stop_action.triggered.connect(self.clicked)
 
-                
-        mops_action = QAction(QIcon('graphics_Utils/icons/icon_mops.png'), '&MoPs', mainwindow)
-        mops_action.setStatusTip('MoPs Interface') # show when move mouse to the icon
-        mops_action.triggered.connect(self.deviceChildWindow)
            
         toolbar.addAction(new_action)
         toolbar.addAction(open_action)
@@ -174,7 +168,6 @@ class MenuBar(mainWindow.MainWindow):
         toolbar.addAction(start_action)
         toolbar.addAction(pause_action)
         toolbar.addAction(stop_action)
-        toolbar.addAction(mops_action)
                      
     def _createStatusBar(self,mainwindow):
         status = QStatusBar()
@@ -202,11 +195,6 @@ class MenuBar(mainWindow.MainWindow):
             self.MainWindow.show()
         else:
             self.MainWindow.close()
-    
-    def deviceChildWindow(self):
-        self.ui.deviceChildWindow(self.MainWindow)
-        self.MainWindow.show()
-            
         
     def about(self):
         QMessageBox.about(self,"About",

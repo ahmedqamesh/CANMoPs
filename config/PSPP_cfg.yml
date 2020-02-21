@@ -4,16 +4,16 @@ Application:
     icon_dir                :   "graphics_Utils/icons/icon_pspp.png"
     nodeIds                 :   [8]
     index_items             :   {
-                                "------" :  {"description_items" :"",
-                                             "subindex_items"    :{     "0":}} 
+                                "------" :  {"description_items" :"<html><b>-----</b></html>",
+                                             "subindex_items"    :{     "-----":"<html><b>-----</b></html>"}} 
                                ,"0x1000" :  {"description_items" :"<html><b> Device type</b> [Default 191(hex)]</b></html>",
-                                             "subindex_items"    :{     "0":}}      
+                                             "subindex_items"    :{     "0":"<html><b>-----</b></html>"}}      
                                ,"0x1001" :  {"description_items" :"<html><b> Error register</b> [Default 0]</b></html>",
-                                             "subindex_items"    :{     "0":}}
+                                             "subindex_items"    :{     "0":"<html><b>-----</b></html>"}}
                                ,"0x1005" :  {"description_items" :"<html><b> COB-ID SYNC</b> [Default 80(hex)]</b></html>",
-                                             "subindex_items"    :  {   "0":}}
+                                             "subindex_items"    :  {   "0":"<html><b>-----</b></html>"}}
                                ,"0x1014" :  {"description_items" :"<html><b> COB-ID EMCY</b> [Default 80(hex)+NodeId]</b></html>",
-                                             "subindex_items"    :  {   "0":    }}
+                                             "subindex_items"    :  {   "0":"<html><b>-----</b></html>"}}
                                             
                                ,"0x1018" :  {"description_items" :"<html><b> Identity object needs</b></html>",
                                              "subindex_items"    :  {   "0":"<html><u>subindex 0:</u> Number of entries [Default 1]</html>",
@@ -46,9 +46,9 @@ Application:
                                             "subindex_items"    :  {    "0":"<html><u>subindex 0:</u> Number of entries [Default 1]</html>",
                                                                         "1":"<html><u>subindex 1:</u> PDO mapping entry [Default 20010030(hex)]</html>"}}                                       
                                ,"0x2000" : {"description_items" : "<html><b> Read monitoring values of all FEs</b></html>",
-                                            "subindex_items"    :  {"0":}}
+                                            "subindex_items"    :  {"0":"<html><b>-----</b></html>"}}
                                ,"0x2001" : {"description_items" :"<html><b> Read PSPP monitoring data</b></html>",
-                                            "subindex_items"    :  {"0":}}                                                                                               
+                                            "subindex_items"    :  {"0":"<html><b>-----</b></html>"}}                                                                                               
                                ,"0x2100":  {"description_items" :"<html><b> FE monitoring values</b></html>",
                                             "subindex_items"    :  {    "0":"<html><u>subindex 0</u>:Number of entries [Default 2]</html>",
                                                                         "1":"<html><u>subindex 1</u>:Temperature ADC count</html>",
@@ -164,7 +164,7 @@ Application:
                                                                         "30":"<html><u>subindex 30</u>:ID</html>",
                                                                         "31":"<html><u>subindex 31</u>:BG Trim</html>",
                                                                         "32":"<html><u>subindex 32</u>:Read SEU counter</html>"}} 
-                               ,"0x2300":  {"description_items" :"<html><b> Internal ADC channels</b></html>",
+                               ,"0x2300":  {"description_items"  :"<html><b> Internal ADC channels</b></html>",
                                             "subindex_items"     :  {   "0":"<html><u>subindex 0</u>:Number of entries [Default 8]</html>",
                                                                         "1":"<html><u>subindex 1</u>:Ch32</html>",
                                                                         "2":"<html><u>subindex 2</u>:Ch33</html>",

@@ -66,11 +66,11 @@ class ControlServer(object):
             conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-8])
         self._index_items       =   conf["default_values"]["index_items"]
         self.__interfaceItems   =   conf['default_values']["interface_items"]        
+        self.__bitrate_items     =   conf['default_values']['bitrate_items']
         self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
         self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
-        
         
         """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently present on the bus."""
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
@@ -100,7 +100,10 @@ class ControlServer(object):
             channel = self.__channel
         self.__channel = channel
                 
+        
+       
         self.__ch = None 
+
         self.__busOn = False  
 
         
@@ -145,13 +148,15 @@ class ControlServer(object):
                                  f'values!')
             return bitrate
     
-    def start_channelConnection(self, interface = None, ipAddress = None, channel = None, baudrate= None): 
+    def start_channelConnection(self, interface = None):
+        channel = self.get_channelNumber()
         self.logger.success("Connecting to %s Interface" %interface)
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(channel,canlib.canOPEN_ACCEPT_VIRTUAL)
         else:
-            self.__ch = analib.Channel(ipAddress, channel, baudrate=baudrate)
-        
+            ipAddress =self.get_ipAddress()
+            bitrate =self.get_bitrate()
+            self.__ch = analib.Channel(ipAddress, channel, baudrate=bitrate)
     def set_canController(self, interface = None):
         if interface == 'Kvaser':
             self.__ch.setBusParams(self.__bitrate)
@@ -165,7 +170,7 @@ class ControlServer(object):
     #Setter and getter functions
     def set_interface(self, x):
         self.__interface = x
-        self.get_interface()
+        
         
     def set_nodeIds(self,x):
         self.__nodeIds =x
@@ -179,30 +184,25 @@ class ControlServer(object):
     def set_bitrate(self,x):
         self.__bitrate = x
 
-        
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
         return ret
     
     def get_nodeIds(self):
         return self.__nodeIds
-    
-    def get_channelState(self,channel):
-        return channel.state
+
     
     def get_bitrate(self):
         return self.__bitrate
 
-    
     def get_ipAddress(self):
         """:obj:`str` : Network address of the AnaGate partner. Only used for
         AnaGate CAN interfaces."""
-        if self.__interface == 'Kvaser':
-            raise AttributeError('You are using a Kvaser CAN interface!')
+        #if self.__interface == 'Kvaser':
+        #    raise AttributeError('You are using a Kvaser CAN interface!')
         return self.__ipAddress    
 
-    def get_interfaceItems(self):
-        return self.__interfaceItems
+
     
     def get_interface(self):
         """:obj:`str` : Vendor of the CAN interface. Possible values are
@@ -214,6 +214,15 @@ class ControlServer(object):
         """:obj:`int` : Number of the crurrently used |CAN| channel."""
         return self.__channel
 
+    def get_interfaceItems(self):
+        return self.__interfaceItems
+    
+    def get_bitrate_items(self):
+            return self.__bitrate_items
+           
+    def get_channelState(self,channel):
+        return channel.state
+    
     @property
     def lock(self):
         """:class:`~threading.Lock` : Lock object for accessing the incoming
@@ -280,7 +289,7 @@ class ControlServer(object):
 #         else:
 #             self.__ch.baudrate = bitrate     
 
-    def sdoRead(self, nodeId, index, subindex, timeout=100,MAX_DATABYTES=8):
+    def sdoRead(self, nodeId, index, subindex,interface, timeout=100,MAX_DATABYTES=8):
         """Read an object via |SDO|
     
         Currently expedited and segmented transfer is supported by this method.
@@ -308,7 +317,7 @@ class ControlServer(object):
         self.logger.notice("Reading an object via |SDO|")
         SDO_TX =0x580  
         SDO_RX = 0x600
-        interface =self.__interface
+        #interface =self.get_interface()
         self.set_canController(interface=interface)
         if nodeId is None or index is None or subindex is None:
             return None
@@ -420,7 +429,6 @@ class ControlServer(object):
         cbFunc
             Function pointer to the callback function
         """
-
         def cbFunc(cobid, data, dlc, flag, handle):
             """Callback function.
 
