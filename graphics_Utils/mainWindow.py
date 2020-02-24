@@ -27,14 +27,19 @@ import verboselogs
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
-    def __init__(self,parent=None, device_config = ["PSPP_cfg.yml"], interfaces = None):
+    def __init__(self,parent=None, 
+                 device_config = ["PSPP_cfg.yml"]):
         super(MainWindow, self).__init__(parent)
         #Start with default settings
         config_dir = "config/"
         self.server = controlServer.ControlServer()
         self.__interfaceItems = self.server.get_interfaceItems() 
         self.__channel = self.server.get_channelNumber()
-        self.__interface =interfaces 
+        self.__subIndex = self.server.get_subIndex()
+        self.__nodeIds = self.server.get_nodeIds()       
+        self.__cobid = self.server.get_cobid()
+        self.__dlc = self.server.get_dlc()
+        self.__Bytes = self.server.get_bytes()
         #Load the configuration file
         if device_config is not None: 
             for device in device_config: 
@@ -46,11 +51,6 @@ class MainWindow(QMainWindow):
             self.__dictionary_items = dev["Application"]["index_items"]
             self.__index_items = list(self.__dictionary_items.keys())
             
-        #set default settings
-        self.__Bytes =  ["40","0","34","1","0","0","0","0"] 
-        self.__subIndex = "0"
-        self.__cobid = "608"
-        self.__dlc = "8"
         #Show a textBox
         self.textBoxWindow()
         self.configureDeviceBox()
@@ -100,7 +100,6 @@ class MainWindow(QMainWindow):
         __interfaceItems = self.__interfaceItems
         self.interfaceComboBox = QComboBox(self)
         for item in __interfaceItems[1:]: self.interfaceComboBox.addItem(item)
-        
         #self.interfaceComboBox.activated[str].connect(self.set_interface)
         
         self.connectButton = QPushButton("")
@@ -111,7 +110,6 @@ class MainWindow(QMainWindow):
         
         self.connectButton.setIcon(icon)
         self.connectButton.setCheckable(True)
-        self.connectButton.clicked.connect(self.applyInterfaceComboBoxChanges)
         self.connectButton.clicked.connect(self.set_connect)
         
         
@@ -126,12 +124,12 @@ class MainWindow(QMainWindow):
         
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
-        self.indexTextBox = QLineEdit(self.__index_items[1], self)
+        self.mainIndexTextBox = QLineEdit(self.__index_items[1], self)
         #self.indexTextBox.textChanged.connect(self.set_index)
         
         subIndexLabel = QLabel("    SubIndex", self)
         subIndexLabel.setText("SubIndex")
-        self.subIndextextbox = QLineEdit(self.__subIndex, self)
+        self.mainSubIndextextbox = QLineEdit(self.__subIndex, self)
         #self.subIndextextbox.textChanged.connect(self.set_subIndex)
                 
         self.startButton = QPushButton("")
@@ -143,23 +141,21 @@ class MainWindow(QMainWindow):
         self.GridLayout.addWidget(nodeComboBox,1,0)
         
         self.GridLayout.addWidget(indexLabel,0,1)
-        self.GridLayout.addWidget(self.indexTextBox,1,1)
+        self.GridLayout.addWidget(self.mainIndexTextBox,1,1)
         
         self.GridLayout.addWidget(subIndexLabel,0,2)
-        self.GridLayout.addWidget(self.subIndextextbox,1,2)       
+        self.GridLayout.addWidget(self.mainSubIndextextbox,1,2)       
         self.GridLayout.addWidget(self.startButton,1,3)
     
-    def applyInterfaceComboBoxChanges(self):
-        self.__interface = (str(self.interfaceComboBox.currentText()))
-        
     def applyInterfaceChildComboBoxChanges(self, x):
         self.__interface = x
     
     def applyLineEditChanges(self):
-        self.set_index(self.indexTextBox.text())
-        self.set_subIndex(self.subIndextextbox.text())
+        self.set_index(self.mainIndexTextBox.text())
+        self.set_subIndex(self.mainSubIndextextbox.text())
 
     def set_connect(self):
+        self.__interface = (str(self.interfaceComboBox.currentText()))
         interface = self.get_interface()
         self.server.start_channelConnection(interface = interface)
                
@@ -173,181 +169,6 @@ class MainWindow(QMainWindow):
         self.HLayout.addWidget(deviceButton)
         deviceButton.clicked.connect(self.deviceWindow)   
 
-    def deviceWindow(self):
-        self.Mainwindow = QMainWindow()
-        self.deviceChildWindow(self.Mainwindow)
-        self.Mainwindow.show()
-        
-    def createProgressBar(self):
-        self.progressBar = QProgressBar()
-        self.progressBar.setRange(0, 10000)
-        self.progressBar.setValue(0)
-
-        timer = QTimer(self)
-        timer.timeout.connect(self.advanceProgressBar)
-        timer.start(1000)
-
-    def advanceProgressBar(self):
-        curVal = self.progressBar.value()  
-        maxVal = self.progressBar.maximum()
-        self.progressBar.setValue(curVal + (maxVal - curVal) / 100)
-       
-    def send_sdo_can(self):
-        index = int(self.get_index(),16)
-        subIndex = int(self.get_subIndex(),16)
-        nodeId = self.__nodeIds[0]
-        interface = self.__interface
-        print(nodeId, index, subIndex,interface)
-        response = self.server.sdoRead(nodeId, index, subIndex,interface,3000)
-        self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = response )
-
-    def send_can(self):
-        cobid = int(self.get_cobid())
-        bytes =list(map(int, self.get_Bytes()))
-        #Send the can Message
-        print(str(bytes), cobid)
-        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
-        self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
-        # receive the message
-        self.read_can()
-        
-    def read_can(self):
-        cobid, data, dlc, flag, t = self.server.readCanMessages()
-        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(data))
-    
-    
-    def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
-        # printing the read message with cobid = SDO_RX + nodeId
-        MAX_DATABYTES =8
-        msg = [0 for i in range(MAX_DATABYTES)]
-        msg[1], msg[2] = index.to_bytes(2, 'little')
-        msg[3] = subIndex
-        msg[0] = 0x40
-        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(msg))
-        #printing response 
-        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(response_from_node))
-        #print decoded response
-        decoded_response = f'{response_from_node:03X}\n-------------------------------------------'
-        self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
-
-    def set_textBox_message(self, comunication_object = None, msg ="This is a message"):
-       
-        if comunication_object == "SDO_RX"  :   
-            color = QColor("green")
-            mode    =   "W    :"
-        if comunication_object == "SDO_TX"  :   
-            color = QColor("red") 
-            mode    =   "R    :"
-        if comunication_object == "Decoded" :   
-            color = QColor("blue")
-            mode    =   "D    :"
-        self.textBox.setTextColor(color)
-        self.textBox.append(mode+msg)
-    
-                    
-    def set_all(self):
-        self.logger.success('========Setting CAN configurations=======')
-        ipAddress = self.get_ipAddress()
-        bitrate = self.get_bitrate()
-        interface = self.get_interface()
-        self.server.set_interface(interface)
-        self.server.set_bitrate(bitrate)
-        self.server.set_ipAddress(ipAddress)
-        
-            
-    def set_nodeId(self,x):
-        self.__nodeId =x
-        
-    def set_index(self,x):
-        self.__index = x
-    
-    def set_bitrate(self,x):
-        self.__bitrate = int(x)       
-
-    def set_ipAddress(self,x):
-        self.__ipAddress = x
-               
-    def set_subIndex(self,x):
-        
-        self.__subIndex = x
-                
-
-
-
-    
-    def set_cobid(self, x):
-        self.__cobid = x
-    
-    def set_dlc(self,x):
-        self.__dlc = x
-    
-    def set_Bytes(self,x):
-        self.__Bytes = x
-        
-    def get_index_items(self):
-        return self.__index_items
-               
-    def get_nodeId(self):
-        return self.__nodeId
-    
-    def get_index(self):
-        return self.__index
-
-    def get_subIndex(self):
-        return self.__subIndex
-          
-    def get_dictionary_items(self):
-        return self.__dictionary_items  
-    
-    def get_interface(self): 
-        return self.__interface
-
-    def get_icon_dir(self):
-        return self.__icon_dir
-    
-    def get_appName(self):
-        return self.__appName
-    def get_DllVersion(self):
-        ret = analib.wrapper.dllInfo()
-        return ret
-    
-    def get_nodeIds(self):
-        return self.__nodeIds
-
-    def get_cobid(self):
-        return  self.__cobid
-    
-    def get_dlc(self):
-        return self.__dlc
-
-    def get_Bytes(self):
-        return self.__Bytes 
-        
-    def get_bitrate(self):
-        return self.__bitrate
-
-    def get_ipAddress(self):
-        """:obj:`str` : Network address of the AnaGate partner. Only used for
-        AnaGate CAN interfaces."""
-        if self.__interface == 'Kvaser':
-            raise AttributeError('You are using a Kvaser CAN interface!')
-        return self.__ipAddress    
-
-    def get_interfaceItems(self):
-        return self.__interfaceItems
-    
-    def get_interface(self):
-        """:obj:`str` : Vendor of the CAN interface. Possible values are
-        ``'Kvaser'`` and ``'AnaGate'``."""
-        return self.__interface
-
-    def get_channel(self):
-        return self.__channel    
-
-    def get_channelNumber(self):
-        """:obj:`int` : Number of the crurrently used |CAN| channel."""
-        return self.__channel
-        
     def deviceChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("OutputWindow")
         ChildWindow.setWindowTitle("Output Window")
@@ -418,8 +239,351 @@ class MainWindow(QMainWindow):
         
         self.WindowGroupBox.setLayout(self.GridLayout)
         logframe.setLayout(self.GridLayout)
-        
 
+
+    def canSettingsChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("CANSettings")
+        ChildWindow.setWindowTitle("CAN Settings")
+        ChildWindow.resize(310, 600)  # w*h
+        MainLayout = QGridLayout()
+        
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(plotframe)
+        
+        # Define First Group
+        FirstGroupBox = QGroupBox("Bus Statistics")
+        FirstGridLayout = QGridLayout()
+        
+        clear_button = QPushButton("Clear")
+        clear_button.clicked.connect(ChildWindow.close)
+        
+        FirstGridLayout.addWidget(clear_button, 0, 0)
+        FirstGroupBox.setLayout(FirstGridLayout)
+        
+        # Define the second group
+        SecondGroupBox = QGroupBox("Bus Configuration")
+        SecondGridLayout = QGridLayout()        
+        # comboBox and label for channel
+        chLabel = QLabel("CAN Channel:", ChildWindow)
+        chLabel.setText("CAN Channel:")
+        controllerLayout = QHBoxLayout()
+        __interfaceItems = self.__interfaceItems
+        self.interfaceComboBox = QComboBox(ChildWindow)
+        for item in __interfaceItems: self.interfaceComboBox.addItem(item)
+        #interfaceComboBox.activated[str].connect(self.main.set_interface)
+        self.interfaceComboBox.activated[str].connect(self.applyInterfaceChildComboBoxChanges)
+        
+        controllerLayout.addWidget(self.interfaceComboBox)
+        
+        # Another group will be here for Bus parameters
+        self.BusParametersGroupBox()
+        modeLabel = QLabel("CAN Mode:", ChildWindow)
+        modeLabel.setText("CAN Mode:")
+        modeitems = ["CAN"]
+        modeComboBox = QComboBox(ChildWindow)
+        for item in modeitems: modeComboBox.addItem(item)
+        #modeComboBox.activated[str].connect(self.clicked)
+
+        # FirstButton
+        clear_button = QPushButton("Clear")
+        clear_button.clicked.connect(ChildWindow.close)
+
+        HGridLayout = QGridLayout()  
+        set_button = QPushButton("Set in all")
+        set_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+
+        set_button.clicked.connect(self.set_all)
+        
+        h , w = 50 , 25
+        connectButton = QPushButton("")
+        connectButton.setFixedWidth(w)
+        connectButton.setIcon(QIcon('graphics_Utils/icons/icon_disconnect.jpg'))
+        icon = QIcon()
+        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_disconnect.jpg'), QIcon.Normal, QIcon.Off)
+        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_connect.jpg'), QIcon.Normal, QIcon.On)
+        connectButton.setIcon(icon)
+        connectButton.setCheckable(True)
+        connectButton.clicked.connect(self.set_connect) 
+        
+        setLabel = QLabel("Set same bit rate in all CAN controllers", ChildWindow)
+        setLabel.setText("Set same bit rate in all CAN controllers")
+        
+        HGridLayout.addWidget(set_button, 0, 0)
+        HGridLayout.addWidget(connectButton, 0, 1) 
+        HGridLayout.addWidget(setLabel, 0, 2)
+        
+        SecondGroupBox.setLayout(SecondGridLayout)
+        SecondGridLayout.addWidget(chLabel, 0, 0)
+        SecondGridLayout.addLayout(controllerLayout, 1, 0)
+        SecondGridLayout.addWidget(modeLabel, 2, 0)
+        SecondGridLayout.addWidget(modeComboBox, 3, 0)
+        
+        def _interfaceParameters():
+            SecondGridLayout.removeWidget(self.SubSecondGroupBox)
+            self.SubSecondGroupBox.deleteLater()
+            self.SubSecondGroupBox = None
+            interface = self.get_interface()
+            self.BusParametersGroupBox(ChildWindow=ChildWindow , interface=interface)
+            SecondGridLayout.addWidget(self.SubSecondGroupBox, 4, 0)        
+
+        SecondGridLayout.addLayout(HGridLayout, 5, 0)
+        self.interfaceComboBox.activated[str].connect(_interfaceParameters)
+        # Define Third Group
+        ThirdGroupBox = QGroupBox("Bus Status")
+        ThirdGridLayout = QGridLayout()
+        
+        go_button = QPushButton("Go On Bus")
+        go_button.setIcon(QIcon('graphics_Utils/icons/icon_reset.png'))
+        go_button.clicked.connect(ChildWindow.close)
+        
+        ThirdGridLayout.addWidget(go_button, 0, 0)
+        ThirdGroupBox.setLayout(ThirdGridLayout)
+        MainLayout.addWidget(FirstGroupBox, 0, 0)
+        MainLayout.addWidget(SecondGroupBox, 1, 0)
+        MainLayout.addWidget(ThirdGroupBox, 2, 0)
+        plotframe.setLayout(MainLayout) 
+        self._createStatusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)        
+
+    def BusParametersGroupBox(self, ChildWindow=None, interface="Others"):
+        # Define subGroup
+        self.SubSecondGroupBox = QGroupBox("Bus Parameters")
+        SubSecondGridLayout = QGridLayout()
+        firstLabel = QLabel("firstLabel", ChildWindow)
+        secondLabel = QLabel("secondLabel", ChildWindow)
+        thirdLabel = QLabel("thirdLabel", ChildWindow)
+        firstComboBox = QComboBox(ChildWindow)
+        if (interface == "Kvaser"):
+            firstLabel.setText("Bus Speed:")
+            firstItems = ["1000 kbit/s, 75.0%", "500 kbit/s, 75.0%", "250 kbit/s, 75.0%", " 125 kbit/s, 75.0%", "100 kbit/s, 75.0%", "83.333 kbit/s, 75.0%", "62.500 kbit/s, 75.0%", "50 kbit/s, 75.0%", "33.333 kbit/s, 75.0%" ]
+            for item in firstItems: firstComboBox.addItem(item)
+            #firstComboBox.activated[str].connect(self.clicked)
+            secondLabel.setText("SJW:")
+            secondItems = ["1", "2", "3", "4"]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in secondItems: secondComboBox.addItem(item)
+            #secondComboBox.activated[str].connect(self.clicked)
+            thirdLabel.setText("Bit Timing:")
+            thirdItems = self.server.get_bitrate_items()
+            thirdComboBox = QComboBox(ChildWindow)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
+            
+        if (interface == "AnaGate"):
+            firstLabel.setText("IP address")
+            ipAddress = self.server.get_ipAddress()
+            self.firsttextbox = QLineEdit(ipAddress, ChildWindow)
+            self.firsttextboxValue = self.firsttextbox.text()
+            secondLabel.setText("SJW:")
+            secondItems = ["1", "2", "3", "4"]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in secondItems: secondComboBox.addItem(item)
+            #secondComboBox.activated[str].connect(self.clicked)
+            thirdLabel.setText("Bit Timing:")
+            thirdItems = self.server.get_bitrate_items()
+            thirdComboBox = QComboBox(ChildWindow)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            SubSecondGridLayout.addWidget(self.firsttextbox, 0, 1)
+            
+        if (interface == "Others"):        
+            firstLabel.setText("Speed:")
+            firstItems = [""]
+            firstComboBox = QComboBox(ChildWindow)
+            for item in firstItems: firstComboBox.addItem(item)
+            #firstComboBox.activated[str].connect(self.clicked)
+            secondLabel.setText("")
+            seconditems = [""]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in seconditems: secondComboBox.addItem(item)
+            #secondComboBox.activated[str].connect(self.clicked)
+            thirdLabel.setText("")
+            thirdItems = [""]
+            thirdComboBox = QComboBox(ChildWindow)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
+        else:
+            pass   
+        SubSecondGridLayout.addWidget(firstLabel, 0, 0)
+        SubSecondGridLayout.addWidget(secondLabel, 1, 0)
+        SubSecondGridLayout.addWidget(secondComboBox, 1, 1)
+        SubSecondGridLayout.addWidget(thirdLabel, 2, 0)
+        SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
+        self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
+
+                    
+    def set_all(self):
+        self.logger.success('========Setting CAN configurations=======')
+        #ipAddress = self.get_ipAddress()
+        #bitrate = self.get_bitrate()
+        #interface = self.get_interface()
+        #self.server.set_interface(interface)
+        #self.server.set_bitrate(bitrate)
+        #self.server.set_ipAddress(ipAddress)
+        self.set_ipAddress(self.firsttextboxValue)
+        self.server.set_interface(self.__interface)
+        self.server.set_bitrate(self.__bitrate)
+        self.server.set_ipAddress(self.__ipAddress)
+                       
+    def canMessageChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("canMessageChildWindow")
+        ChildWindow.setWindowTitle("CAN Message")
+        ChildWindow.resize(310, 600)  # w*h
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        MainLayout = QGridLayout()
+        
+        FirstGroupBox = QGroupBox("")
+        # comboBox and label for channel
+        FirstGridLayout = QGridLayout() 
+        cobidLabel = QLabel("CAN Identifier", ChildWindow)
+        cobidLabel.setText("CAN Identifier:")
+        cobidtextbox = QLineEdit(self.__cobid, ChildWindow)
+        cobidtextboxValue = cobidtextbox.text()
+        self.set_cobid(cobidtextboxValue)
+        channelLabel = QLabel("Channel        :", ChildWindow)
+        channelLabel.setText("Channel         :")
+        canitems = ["CAN1"]
+        canComboBox = QComboBox(ChildWindow)
+        for item in canitems: canComboBox.addItem(item)
+        dlcLabel = QLabel("DLC            :", ChildWindow)
+        dlcLabel.setText("DLC            :")
+        dlctextbox = QLineEdit(self.__dlc, ChildWindow)
+        dlctextboxValue = dlctextbox.text()
+        self.set_dlc(dlctextboxValue)
+        
+        
+        FirstGridLayout.addWidget(cobidLabel, 0, 0)
+        FirstGridLayout.addWidget(cobidtextbox, 0, 1)
+                
+        FirstGridLayout.addWidget(channelLabel, 1, 0)
+        FirstGridLayout.addWidget(canComboBox, 1, 1)        
+        
+        FirstGridLayout.addWidget(dlcLabel, 2, 0)
+        FirstGridLayout.addWidget(dlctextbox, 2, 1)  
+             
+        FirstGroupBox.setLayout(FirstGridLayout) 
+        
+        SecondGroupBox = QGroupBox("Message Data")
+        # comboBox and label for channel
+        SecondGridLayout = QGridLayout()
+        ByteList = ["Byte0 :", "Byte1 :", "Byte2 :", "Byte3 :", "Byte4 :", "Byte5 :", "Byte6 :", "Byte7 :"] 
+        LabelByte = [ByteList[i] for i in np.arange(len(ByteList))]
+        textbox = [ByteList[i] for i in np.arange(len(ByteList))]
+        textboxValue = [ByteList[i] for i in np.arange(len(ByteList))]
+        for i in np.arange(len(ByteList)):
+            LabelByte[i] = QLabel(ByteList[i], ChildWindow)
+            LabelByte[i].setText(ByteList[i])
+            textbox[i] = QLineEdit(self.__Bytes[i], ChildWindow)
+            textboxValue[i] = textbox[i].text()
+            if i <= 3:
+                SecondGridLayout.addWidget(LabelByte[i], i, 0)
+                SecondGridLayout.addWidget(textbox[i], i, 1)
+            else:
+                SecondGridLayout.addWidget(LabelByte[i], i - 4, 4)
+                SecondGridLayout.addWidget(textbox[i], i - 4, 5)
+        self.set_bytes(textboxValue)
+        SecondGroupBox.setLayout(SecondGridLayout) 
+        
+        HBox = QHBoxLayout()
+        send_button = QPushButton("Send")
+        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+        send_button.clicked.connect(self.send_can)
+        
+        close_button = QPushButton("close")
+        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
+        close_button.clicked.connect(ChildWindow.close)
+
+        HBox.addWidget(send_button)
+        HBox.addWidget(close_button)
+                 
+        MainLayout.addWidget(FirstGroupBox , 0, 0)
+        MainLayout.addWidget(SecondGroupBox , 1, 0)
+        MainLayout.addLayout(HBox , 2, 0)
+        
+        ChildWindow.setCentralWidget(plotframe)
+        plotframe.setLayout(MainLayout) 
+        self._createStatusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
+
+        
+    def deviceWindow(self):
+        self.Mainwindow = QMainWindow()
+        self.deviceChildWindow(self.Mainwindow)
+        self.Mainwindow.show()
+        
+    def createProgressBar(self):
+        self.progressBar = QProgressBar()
+        self.progressBar.setRange(0, 10000)
+        self.progressBar.setValue(0)
+
+        timer = QTimer(self)
+        timer.timeout.connect(self.advanceProgressBar)
+        timer.start(1000)
+
+    def advanceProgressBar(self):
+        curVal = self.progressBar.value()  
+        maxVal = self.progressBar.maximum()
+        self.progressBar.setValue(curVal + (maxVal - curVal) / 100)
+       
+    def send_sdo_can(self):
+        index = int(self.get_index(),16)
+        subIndex = int(self.get_subIndex(),16)
+        nodeId = self.__nodeIds[0]
+        interface = self.__interface
+        response = self.server.sdoRead(nodeId, index, subIndex,interface,3000)
+        self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = response )
+
+    def send_can(self):
+        cobid = int(self.get_cobid(),16)
+        bytes =list(map(int, self.get_bytes()))
+        print(cobid)
+        #Send the can Message
+        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
+        self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
+        # receive the message
+        self.read_can()
+        
+    def read_can(self):
+        cobid, data, dlc, flag, t = self.server.readCanMessages()
+        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(data))
+       
+    def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
+        # printing the read message with cobid = SDO_RX + nodeId
+        MAX_DATABYTES =8
+        msg = [0 for i in range(MAX_DATABYTES)]
+        msg[1], msg[2] = index.to_bytes(2, 'little')
+        msg[3] = subIndex
+        msg[0] = 0x40
+        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(msg))
+        #printing response 
+        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(response_from_node))
+        #print decoded response
+        decoded_response = f'{response_from_node:03X}\n-------------------------------------------'
+        self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
+
+    def set_textBox_message(self, comunication_object = None, msg ="This is a message"):
+       
+        if comunication_object == "SDO_RX"  :   
+            color = QColor("green")
+            mode    =   "W    :"
+        if comunication_object == "SDO_TX"  :   
+            color = QColor("red") 
+            mode    =   "R    :"
+        if comunication_object == "Decoded" :   
+            color = QColor("blue")
+            mode    =   "D    :"
+        self.textBox.setTextColor(color)
+        self.textBox.append(mode+msg)
+    
+
+                
+        
     def set_index_value(self):
         index = self.IndexListBox.currentItem().text()
         self.set_index(index)
@@ -428,6 +592,94 @@ class MainWindow(QMainWindow):
         if self.subIndexListBox.currentItem() is not None:
             subindex = self.subIndexListBox.currentItem().text()
             self.set_subIndex(subindex)
+     
+    def set_interface(self, x): 
+        self.__interface = x                        
+    def set_nodeId(self,x):
+        self.__nodeId =x
+        
+    def set_index(self,x):
+        self.__index = x
+    
+    def set_bitrate(self,x):
+        self.__bitrate = int(x)       
+
+    def set_ipAddress(self,x):
+        self.__ipAddress = x
+               
+    def set_subIndex(self,x):
+        self.__subIndex = x
+                
+    def set_cobid(self, x):
+        self.__cobid = x
+    
+    def set_dlc(self,x):
+        self.__dlc = x
+    
+    def set_bytes(self,x):
+        self.__bytes = x
+        
+    def get_index_items(self):
+        return self.__index_items
+               
+    def get_nodeId(self):
+        return self.__nodeId
+    
+    def get_index(self):
+        return self.__index
+          
+    def get_dictionary_items(self):
+        return self.__dictionary_items  
+
+    def get_icon_dir(self):
+        return self.__icon_dir
+    
+    def get_appName(self):
+        return self.__appName
+    def get_DllVersion(self):
+        ret = analib.wrapper.dllInfo()
+        return ret
+    
+    def get_nodeIds(self):
+        return self.__nodeIds
+
+    def get_subIndex(self):
+        return self.__subIndex
+    
+    def get_cobid(self):
+        return  self.__cobid
+    
+    def get_dlc(self):
+        return self.__dlc
+
+    def get_bytes(self):
+        return self.__bytes 
+        
+    def get_bitrate(self):
+        return self.__bitrate
+
+    def get_ipAddress(self):
+        """:obj:`str` : Network address of the AnaGate partner. Only used for
+        AnaGate CAN interfaces."""
+        if self.__interface == 'Kvaser':
+            raise AttributeError('You are using a Kvaser CAN interface!')
+        return self.__ipAddress    
+
+    def get_interfaceItems(self):
+        return self.__interfaceItems
+        
+    def get_interface(self):
+        """:obj:`str` : Vendor of the CAN interface. Possible values are
+        ``'Kvaser'`` and ``'AnaGate'``."""
+        return self.__interface
+
+    def get_channel(self):
+        return self.__channel    
+
+    def get_channelNumber(self):
+        """:obj:`int` : Number of the crurrently used |CAN| channel."""
+        return self.__channel
+
 
     def get_subIndex_items(self):
         index = self.get_index()
@@ -451,13 +703,13 @@ class MainWindow(QMainWindow):
             self.subindex_description_items = analysis_utils.get_subindex_description_yaml(dictionary=dictionary, index=index, subindex=subindex)
             description_text = self.index_description_items + "<br>" + self.subindex_description_items
             self.indexTextBox.setText(description_text)    
-    @property
-    def interfaces(self):
-        return self.__interface
-    
-    @interfaces.setter
-    def set_interface(self, x): 
-        self.__interface = x 
+
+    def _createStatusBar(self, childwindow):
+        status = QStatusBar()
+        status.showMessage("Ready")
+        childwindow.setStatusBar(status)
+
+
 if __name__ == "__main__":
     pass
 

@@ -20,133 +20,19 @@ class ChildWindow(QWidget):
        super(ChildWindow, self).__init__(parent)
        self.main = mainWindow.MainWindow()
        self.__interfaceItems = self.main.get_interfaceItems()
-       self.__nodeIds = self.main.get_nodeIds()       
-       self.__cobid = self.main.get_cobid()
-       self.__dlc = self.main.get_dlc()
-       self.__Bytes = self.main.get_Bytes()
        self.__icon_dir = self.main.get_icon_dir()
        self.__dictionary_items = self.main.get_dictionary_items()
        self.__index_items = self.main.get_index_items()
+
        self.server = controlServer.ControlServer()
+       self.__nodeIds = self.server.get_nodeIds()       
+       self.__cobid = self.server.get_cobid()
+       self.__dlc = self.server.get_dlc()
+       self.__Bytes = self.server.get_bytes()
        self.index_description_items = None
        self.subIndex_description_items = None
        
-    def canMessageChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("canMessageChildWindow")
-        ChildWindow.setWindowTitle("CAN Message")
-        ChildWindow.resize(310, 600)  # w*h
-        # Define a frame for that group
-        plotframe = QFrame(ChildWindow)
-        plotframe.setLineWidth(0.6)
-        MainLayout = QGridLayout()
-        
-        FirstGroupBox = QGroupBox("")
-        # comboBox and label for channel
-        FirstGridLayout = QGridLayout() 
-        cobidLabel = QLabel("CAN Identifier", ChildWindow)
-        cobidLabel.setText("CAN Identifier:")
-        cobidtextbox = QLineEdit(self.__cobid, ChildWindow)
-        cobidtextbox.textChanged.connect(self.main.set_cobid)
-        
-        channelLabel = QLabel("Channel        :", ChildWindow)
-        channelLabel.setText("Channel         :")
-        canitems = ["CAN1"]
-        canComboBox = QComboBox(ChildWindow)
-        for item in canitems: canComboBox.addItem(item)
-        canComboBox.activated[str].connect(self.clicked)
-
-        dlcLabel = QLabel("DLC            :", ChildWindow)
-        dlcLabel.setText("DLC            :")
-        dlctextbox = QLineEdit(self.__dlc, ChildWindow)
-        dlctextbox.textChanged.connect(self.main.set_dlc)
-        
-        FirstGridLayout.addWidget(cobidLabel, 0, 0)
-        FirstGridLayout.addWidget(cobidtextbox, 0, 1)
-                
-        FirstGridLayout.addWidget(channelLabel, 1, 0)
-        FirstGridLayout.addWidget(canComboBox, 1, 1)        
-        
-        FirstGridLayout.addWidget(dlcLabel, 2, 0)
-        FirstGridLayout.addWidget(dlctextbox, 2, 1)  
-             
-        FirstGroupBox.setLayout(FirstGridLayout) 
-        
-        SecondGroupBox = QGroupBox("Message Data")
-        # comboBox and label for channel
-        SecondGridLayout = QGridLayout()
-        ByteList = ["Byte0 :", "Byte1 :", "Byte2 :", "Byte3 :", "Byte4 :", "Byte5 :", "Byte6 :", "Byte7 :"] 
-        LabelByte = [ByteList[i] for i in np.arange(len(ByteList))]
-        textbox = [ByteList[i] for i in np.arange(len(ByteList))]
-        textboxValue = [ByteList[i] for i in np.arange(len(ByteList))]
-        for i in np.arange(len(ByteList)):
-            LabelByte[i] = QLabel(ByteList[i], ChildWindow)
-            LabelByte[i].setText(ByteList[i])
-            textbox[i] = QLineEdit(self.__Bytes[i], ChildWindow)
-            textboxValue[i] = textbox[i].text()
-
-            def set_byte(text=None, i=i):
-                self.__Bytes[i] = text
-
-            textbox[i].textChanged.connect(set_byte)
-            if i <= 3:
-                SecondGridLayout.addWidget(LabelByte[i], i, 0)
-                SecondGridLayout.addWidget(textbox[i], i, 1)
-            else:
-                SecondGridLayout.addWidget(LabelByte[i], i - 4, 4)
-                SecondGridLayout.addWidget(textbox[i], i - 4, 5)
-                         
-        SecondGroupBox.setLayout(SecondGridLayout) 
-        
-        HBox = QHBoxLayout()
-        send_button = QPushButton("Send")
-        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
-        send_button.clicked.connect(self.main.send_can)
-        
-        close_button = QPushButton("close")
-        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
-        close_button.clicked.connect(ChildWindow.close)
-
-        HBox.addWidget(send_button)
-        HBox.addWidget(close_button)
-                 
-        MainLayout.addWidget(FirstGroupBox , 0, 0)
-        MainLayout.addWidget(SecondGroupBox , 1, 0)
-        MainLayout.addLayout(HBox , 2, 0)
-        
-        ChildWindow.setCentralWidget(plotframe)
-        plotframe.setLayout(MainLayout) 
-        self._createStatusBar(ChildWindow)
-        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
-    
-    def outputChildWindow(self, ChildWindow, comunication_object="Normal"):
-        ChildWindow.setObjectName("OutputWindow")
-        ChildWindow.setWindowTitle("Output Window")
-        ChildWindow.resize(600, 600)  # w*h
-        logframe = QFrame(ChildWindow)
-        logframe.setLineWidth(0.6)
-        ChildWindow.setCentralWidget(logframe)
-        self.WindowGroupBox = QGroupBox("")
-        logTextBox = logWindow.QTextEditLogger(ChildWindow, comunication_object=comunication_object)
-        logLayout = QVBoxLayout()
-        logLayout.addWidget(logTextBox.text_edit_widget)
-        self.WindowGroupBox.setLayout(logLayout)
-        logframe.setLayout(logLayout) 
-        
-    def trendChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("OutputWindow")
-        ChildWindow.setWindowTitle("Output Window")
-        ChildWindow.resize(500, 500)  # w*h
-        logframe = QFrame(ChildWindow)
-        logframe.setLineWidth(0.6)
-        ChildWindow.setCentralWidget(logframe)
-        self.WindowGroupBox = QGroupBox("")
-        Fig = dataMonitoring.LiveMonitoringData()
-        plotLayout = QVBoxLayout()
-        plotLayout.addStretch(1)
-        plotLayout.addWidget(Fig)
-        self.WindowGroupBox.setLayout(plotLayout)
-        logframe.setLayout(plotLayout) 
-        
+       
     def canSettingsChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("CANSettings")
         ChildWindow.setWindowTitle("CAN Settings")
@@ -320,17 +206,136 @@ class ChildWindow(QWidget):
         SubSecondGridLayout.addWidget(thirdLabel, 2, 0)
         SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
         self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
+               
+    def canMessageChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("canMessageChildWindow")
+        ChildWindow.setWindowTitle("CAN Message")
+        ChildWindow.resize(310, 600)  # w*h
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        MainLayout = QGridLayout()
+        
+        FirstGroupBox = QGroupBox("")
+        # comboBox and label for channel
+        FirstGridLayout = QGridLayout() 
+        cobidLabel = QLabel("CAN Identifier", ChildWindow)
+        cobidLabel.setText("CAN Identifier:")
+        cobidtextbox = QLineEdit(self.__cobid, ChildWindow)
+        cobidtextboxValue = cobidtextbox.text()
+        self.main.set_cobid(cobidtextboxValue)
+          
+        
+        #self.main.set_bytes(textboxValue[i])
+        channelLabel = QLabel("Channel        :", ChildWindow)
+        channelLabel.setText("Channel         :")
+        canitems = ["CAN1"]
+        canComboBox = QComboBox(ChildWindow)
+        for item in canitems: canComboBox.addItem(item)
+        canComboBox.activated[str].connect(self.clicked)
+        dlcLabel = QLabel("DLC            :", ChildWindow)
+        dlcLabel.setText("DLC            :")
+        dlctextbox = QLineEdit(self.__dlc, ChildWindow)
+        dlctextboxValue = dlctextbox.text()
+        self.main.set_dlc(dlctextboxValue)
+        
+        
+        FirstGridLayout.addWidget(cobidLabel, 0, 0)
+        FirstGridLayout.addWidget(cobidtextbox, 0, 1)
+                
+        FirstGridLayout.addWidget(channelLabel, 1, 0)
+        FirstGridLayout.addWidget(canComboBox, 1, 1)        
+        
+        FirstGridLayout.addWidget(dlcLabel, 2, 0)
+        FirstGridLayout.addWidget(dlctextbox, 2, 1)  
+             
+        FirstGroupBox.setLayout(FirstGridLayout) 
+        
+        SecondGroupBox = QGroupBox("Message Data")
+        # comboBox and label for channel
+        SecondGridLayout = QGridLayout()
+        ByteList = ["Byte0 :", "Byte1 :", "Byte2 :", "Byte3 :", "Byte4 :", "Byte5 :", "Byte6 :", "Byte7 :"] 
+        LabelByte = [ByteList[i] for i in np.arange(len(ByteList))]
+        textbox = [ByteList[i] for i in np.arange(len(ByteList))]
+        textboxValue = [ByteList[i] for i in np.arange(len(ByteList))]
+        for i in np.arange(len(ByteList)):
+            LabelByte[i] = QLabel(ByteList[i], ChildWindow)
+            LabelByte[i].setText(ByteList[i])
+            textbox[i] = QLineEdit(self.__Bytes[i], ChildWindow)
+            textboxValue[i] = textbox[i].text()
+            if i <= 3:
+                SecondGridLayout.addWidget(LabelByte[i], i, 0)
+                SecondGridLayout.addWidget(textbox[i], i, 1)
+            else:
+                SecondGridLayout.addWidget(LabelByte[i], i - 4, 4)
+                SecondGridLayout.addWidget(textbox[i], i - 4, 5)
+        self.main.set_bytes(textboxValue)
+        SecondGroupBox.setLayout(SecondGridLayout) 
+        
+        HBox = QHBoxLayout()
+        send_button = QPushButton("Send")
+        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+        send_button.clicked.connect(self.main.send_can)
+        
+        close_button = QPushButton("close")
+        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
+        close_button.clicked.connect(ChildWindow.close)
 
+        HBox.addWidget(send_button)
+        HBox.addWidget(close_button)
+                 
+        MainLayout.addWidget(FirstGroupBox , 0, 0)
+        MainLayout.addWidget(SecondGroupBox , 1, 0)
+        MainLayout.addLayout(HBox , 2, 0)
+        
+        ChildWindow.setCentralWidget(plotframe)
+        plotframe.setLayout(MainLayout) 
+        self._createStatusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
+    
+    def outputChildWindow(self, ChildWindow, comunication_object="Normal"):
+        ChildWindow.setObjectName("OutputWindow")
+        ChildWindow.setWindowTitle("Output Window")
+        ChildWindow.resize(600, 600)  # w*h
+        logframe = QFrame(ChildWindow)
+        logframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(logframe)
+        self.WindowGroupBox = QGroupBox("")
+        logTextBox = logWindow.QTextEditLogger(ChildWindow, comunication_object=comunication_object)
+        logLayout = QVBoxLayout()
+        logLayout.addWidget(logTextBox.text_edit_widget)
+        self.WindowGroupBox.setLayout(logLayout)
+        logframe.setLayout(logLayout) 
+        
+    def trendChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("OutputWindow")
+        ChildWindow.setWindowTitle("Output Window")
+        ChildWindow.resize(500, 500)  # w*h
+        logframe = QFrame(ChildWindow)
+        logframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(logframe)
+        self.WindowGroupBox = QGroupBox("")
+        Fig = dataMonitoring.LiveMonitoringData()
+        plotLayout = QVBoxLayout()
+        plotLayout.addStretch(1)
+        plotLayout.addWidget(Fig)
+        self.WindowGroupBox.setLayout(plotLayout)
+        logframe.setLayout(plotLayout) 
+        
+ 
 
+    def restoreInterfaceSettings(self):
+        self.__interface = self.server.get_interface() 
+        self.server.set_interface(self.__interface)
         
     def applyLineEditChanges(self):
         self.main.set_ipAddress(self.firsttextbox.text())
-        
-        
+               
     def _createStatusBar(self, childwindow):
         status = QStatusBar()
         status.showMessage("Ready")
         childwindow.setStatusBar(status)
+ 
         
     def clicked(self, q):
         print("is clicked")

@@ -15,8 +15,11 @@ class MenuBar(mainWindow.MainWindow):
     def __init__(self,parent=mainWindow):
         super(MenuBar,self).__init__(parent)
         self.MainWindow = QMainWindow()
-        self.textBox = mainWindow.MainWindow().textBox
-        self.ui = childWindow.ChildWindow()
+        self.main = mainWindow.MainWindow()
+        self.textBox = self.main.textBox
+        
+        
+        #self.ui = childWindow.ChildWindow()
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
@@ -73,20 +76,17 @@ class MenuBar(mainWindow.MainWindow):
         viewMenu = menuBar.addMenu("&View")
         canSettings_action = QAction('&CAN Settings', mainwindow, checkable=True)
         canSettings_action.setStatusTip('CAN Settings')
-        canSettings_action.setChecked(False)
         canSettings_action.triggered.connect(self.canSettingsChildWindow)
 
         
         canMessage_action = QAction('&CAN Message', mainwindow, checkable=True)
         canMessage_action.setStatusTip('CAN Message')
-        canMessage_action.setChecked(False)
         canMessage_action.triggered.connect(self.canMessageChildWindow)
-
                 
         trend_action = QAction('&Data Trending', mainwindow, checkable=True)
         trend_action.setStatusTip('Data Trending')
-        trend_action.setChecked(False)
-        trend_action.triggered.connect(self.trendChildWindow)
+
+       # trend_action.triggered.connect(self.trendChildWindow)
         
         viewMenu.addAction(canSettings_action)
         viewMenu.addAction(canMessage_action)
@@ -99,7 +99,7 @@ class MenuBar(mainWindow.MainWindow):
         settings_action = QAction(QIcon('graphics_Utils/icons/icon_settings.png'), '&Settings', mainwindow)        
         settings_action.setStatusTip('settings action')
         settings_action.setChecked(True)
-        settings_action.triggered.connect(self.openWindow)
+        settings_action.triggered.connect(self.canSettingsChildWindow)
         settings_menu.addAction(settings_action)             
         
     # 4. Help menu
@@ -177,14 +177,14 @@ class MenuBar(mainWindow.MainWindow):
     # Functions to run
     def canMessageChildWindow(self, state):
         if state:
-            self.ui.canMessageChildWindow(self.MainWindow)
+            self.main.canMessageChildWindow(self.MainWindow)
             self.MainWindow.show()
         else:
            self.MainWindow.close()
     
     def canSettingsChildWindow(self,state):
         if state:
-            self.ui.canSettingsChildWindow(self.MainWindow)
+            self.main.canSettingsChildWindow(self.MainWindow)
             self.MainWindow.show()
         else:
            self.MainWindow.close()

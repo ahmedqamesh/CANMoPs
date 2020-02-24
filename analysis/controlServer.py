@@ -66,12 +66,16 @@ class ControlServer(object):
             conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-8])
         self._index_items       =   conf["default_values"]["index_items"]
         self.__interfaceItems   =   conf['default_values']["interface_items"]        
-        self.__bitrate_items     =   conf['default_values']['bitrate_items']
+        self.__bitrate_items    =   conf['default_values']['bitrate_items']
+        self.__bytes            =   conf["default_values"]["bytes"]
+        self.__subIndex         =   conf["default_values"]["subIndex"]
+        self.__cobid            =   conf["default_values"]["cobid"]
+        self.__dlc              =   conf["default_values"]["dlc"]
+        
         self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
         self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
-        
         """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently present on the bus."""
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
 
@@ -94,7 +98,6 @@ class ControlServer(object):
         if ipAddress is None:
             ipAddress = self.__ipAddress
         self.__ipAddress = ipAddress
-        
         """:obj:`int` : Internal attribute for the channel index"""
         if channel is None:
             channel = self.__channel
@@ -106,7 +109,6 @@ class ControlServer(object):
 
         self.__busOn = False  
 
-        
         #Opening channel
         #self.start_channelConnection(interface = interface, ipAddress = ipAddress, channel = channel, baudrate = bitrate)
         """Internal attribute for the |CAN| channel"""
@@ -157,6 +159,7 @@ class ControlServer(object):
             ipAddress =self.get_ipAddress()
             bitrate =self.get_bitrate()
             self.__ch = analib.Channel(ipAddress, channel, baudrate=bitrate)
+            
     def set_canController(self, interface = None):
         if interface == 'Kvaser':
             self.__ch.setBusParams(self.__bitrate)
@@ -168,10 +171,21 @@ class ControlServer(object):
             self.__ch.setCallback(self.__cbFunc)
         
     #Setter and getter functions
+    def set_subIndex(self,x):
+        self.__subIndex = x
+                
+    def set_cobid(self, x):
+        self.__cobid = x
+    
+    def set_dlc(self,x):
+        self.__dlc = x
+    
+    def set_bytes(self,x):
+        self.__bytes = x
+        
     def set_interface(self, x):
         self.__interface = x
-        
-        
+                
     def set_nodeIds(self,x):
         self.__nodeIds =x
     
@@ -198,12 +212,9 @@ class ControlServer(object):
     def get_ipAddress(self):
         """:obj:`str` : Network address of the AnaGate partner. Only used for
         AnaGate CAN interfaces."""
-        #if self.__interface == 'Kvaser':
-        #    raise AttributeError('You are using a Kvaser CAN interface!')
-        return self.__ipAddress    
-
-
-    
+        if self.__interface == 'Kvaser':
+            raise AttributeError('You are using a Kvaser CAN interface!')
+        return self.__ipAddress
     def get_interface(self):
         """:obj:`str` : Vendor of the CAN interface. Possible values are
         ``'Kvaser'`` and ``'AnaGate'``."""
@@ -222,7 +233,19 @@ class ControlServer(object):
            
     def get_channelState(self,channel):
         return channel.state
+
+    def get_subIndex(self):
+        return self.__subIndex
     
+    def get_cobid(self):
+        return  self.__cobid
+    
+    def get_dlc(self):
+        return self.__dlc
+
+    def get_bytes(self):
+        return self.__bytes 
+        
     @property
     def lock(self):
         """:class:`~threading.Lock` : Lock object for accessing the incoming
