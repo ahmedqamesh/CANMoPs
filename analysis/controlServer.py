@@ -13,7 +13,6 @@ from pathlib import Path
 from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
-from graphics_Utils import dataMonitoring , menuWindow , childWindow ,logWindow, mainWindow
 from analysis import analysis_utils , controlServer
 from analysis import CANopenConstants as coc
 # Third party modules
@@ -76,7 +75,6 @@ class ControlServer(object):
         self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
-        """:obj:`list` of :obj:`int` : Contains all |CAN| nodeIds currently present on the bus."""
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
 
                 
@@ -220,7 +218,6 @@ class ControlServer(object):
         ``'Kvaser'`` and ``'AnaGate'``."""
         return self.__interface
     
-
     def get_channelNumber(self):
         """:obj:`int` : Number of the crurrently used |CAN| channel."""
         return self.__channel

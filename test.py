@@ -47,9 +47,9 @@ def test():
     # analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-#     server = controlServer.ControlServer(GUI=None)
+    server = controlServer.ControlServer(GUI=None)
 #     test()
     qapp = QtWidgets.QApplication(sys.argv)
     app = mainWindow.MainWindow()
-    app.Ui_ApplicationWindow()
+    app.Ui_ApplicationWindow(server =server)
     qapp.exec_()

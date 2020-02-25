@@ -18,21 +18,21 @@ from IPython import display
 import matplotlib as mpl
 from matplotlib.figure import Figure
 from analysis import analysis_utils
+from graphics_Utils import childWindow
 
 class LiveMonitoringData(QtWidgets.QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None,period=None, data = None, trending=None):
         super(LiveMonitoringData, self).__init__(parent)
-        self.scan = analysis_utils.BeamSpotScan()
         self.compute_initial_figure()
         self.plot_style()
-        self.initiate_timer()
-    
+        self.initiate_timer(period =period)
+        self.ui = childWindow.ChildWindow()
     def compute_initial_figure(self):                   
         self.graphWidget = pg.PlotWidget()
         self.setCentralWidget(self.graphWidget)
         self.x = list(range(100))  # 100 time points
-        self.y = [randint(0,100) for _ in range(100)]  # 100 data points
+        self.y = [randint(0,10) for _ in range(100)]  # 100 data points
         
 
     def plot_style(self):
@@ -52,21 +52,23 @@ class LiveMonitoringData(QtWidgets.QMainWindow):
         #self.graphWidget.setXRange(0, 10, padding=0)
         #self.graphWidget.setYRange(20, 55, padding=0)
     
-    def initiate_timer(self,period=50):    
+    def initiate_timer(self,period=None):    
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(period)
              
     def update_figure(self):
-        #self.data = self.scan.get_data()
+        
         self.x = self.x[1:]  # Remove the first y element.
         self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
-
+        #data = randint(0,100)
+        data = self.ui.get_data_point()
         self.y = self.y[1:]  # Remove the first 
-        self.y.append(randint(0,100))  # Add a new random value.
+        self.y.append(data)  # Add a new random value.
         self.data_line.setData(self.x, self.y)  # Update the data.
 
-    
+
+
 class MapMonitoringDynamicCanvas(FigureCanvas):
     """A canvas that updates itself every second with a new plot."""
     def __init__(self, parent=None, width=5, height=4, dpi=100 ,period=None, depth = None, z=None, x=None, z_Delay= None, x_Delay=None,size_x =None, size_z = None, directory=None):

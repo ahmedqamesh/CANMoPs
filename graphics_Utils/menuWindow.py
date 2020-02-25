@@ -8,31 +8,24 @@ from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
-from graphics_Utils import dataMonitoring , childWindow ,logWindow, mainWindow
+from graphics_Utils import mainWindow
 cs = False
 wwo = False
 class MenuBar(mainWindow.MainWindow):  
+    
     def __init__(self,parent=mainWindow):
         super(MenuBar,self).__init__(parent)
         self.MainWindow = QMainWindow()
         self.main = mainWindow.MainWindow()
         self.textBox = self.main.textBox
         
-        
-        #self.ui = childWindow.ChildWindow()
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
         self._fileMenu(menuBar,mainwindow)
         self._editMenu(menuBar, mainwindow)
-        self._viewMenu(menuBar, mainwindow)
-        self._settingsMenu(menuBar, mainwindow)
         self._helpMenu(menuBar, mainwindow)
 
-    def _createtoolbar(self,mainwindow):
-        toolbar = mainwindow.addToolBar("tools")
-        self._toolBar(toolbar,mainwindow)
-        
     # 1. File menu
     def _fileMenu(self,menuBar,mainwindow):
                
@@ -70,37 +63,7 @@ class MenuBar(mainWindow.MainWindow):
         fileMenu.addAction(close_action)
         fileMenu.addSeparator()
         fileMenu.addAction(exit_action)
-        
-    # 2. View menu
-    def _viewMenu(self,menuBar,mainwindow):
-        viewMenu = menuBar.addMenu("&View")
-        canSettings_action = QAction('&CAN Settings', mainwindow, checkable=True)
-        canSettings_action.setStatusTip('CAN Settings')
-        canSettings_action.triggered.connect(self.canSettingsChildWindow)
-
-        
-        canMessage_action = QAction('&CAN Message', mainwindow, checkable=True)
-        canMessage_action.setStatusTip('CAN Message')
-        canMessage_action.triggered.connect(self.canMessageChildWindow)
-                
-        trend_action = QAction('&Data Trending', mainwindow, checkable=True)
-        trend_action.setStatusTip('Data Trending')
-
-       # trend_action.triggered.connect(self.trendChildWindow)
-        
-        viewMenu.addAction(canSettings_action)
-        viewMenu.addAction(canMessage_action)
-        viewMenu.addAction(trend_action)
-    
-     # 3. Settings menu
-    def _settingsMenu(self,menuBar,mainwindow): 
-        settings_menu = menuBar.addMenu("&Settings")
-        
-        settings_action = QAction(QIcon('graphics_Utils/icons/icon_settings.png'), '&Settings', mainwindow)        
-        settings_action.setStatusTip('settings action')
-        settings_action.setChecked(True)
-        settings_action.triggered.connect(self.canSettingsChildWindow)
-        settings_menu.addAction(settings_action)             
+           
         
     # 4. Help menu
     def _helpMenu(self,menuBar,mainwindow):
@@ -127,74 +90,12 @@ class MenuBar(mainWindow.MainWindow):
         find_action.setShortcut("Ctrl+F")
         find_action.triggered.connect(self.Find)
         helpmenu.addAction(find_action)
-
-        
-    
-    #make a toolbar         
-    def _toolBar(self,toolbar, mainwindow):
-        
-        new_action = QAction(QIcon('graphics_Utils/icons/icon_new.png'), '&New', mainwindow)
-        new_action.setShortcut('Ctrl+N')
-        new_action.setStatusTip('New start')
-        new_action.triggered.connect(self.clicked)
-        
-        open_action = QAction(QIcon('graphics_Utils/icons/icon_open.png'), '&Open', mainwindow)
-        open_action.setShortcut('Ctrl+O')
-        open_action.setStatusTip('open session') # show when move mouse to the icon
-        open_action.triggered.connect(self.clicked)
-        
-        save_action = QAction(QIcon('graphics_Utils/icons/icon_save.png'), '&Save', mainwindow)
-        save_action.setShortcut('Ctrl+S')
-        save_action.setStatusTip('Save program') # show when move mouse to the icon
-        save_action.triggered.connect(self.clicked)
-
-        start_action = QAction(QIcon('graphics_Utils/icons/icon_start.png'), '&Start', mainwindow)
-        start_action.setStatusTip('Start session') # show when move mouse to the icon
-        start_action.triggered.connect(self.clicked)
-
-        pause_action = QAction(QIcon('graphics_Utils/icons/icon_pause.png'), '&Pause', mainwindow)
-        pause_action.setStatusTip('Pause program') # show when move mouse to the icon
-        pause_action.triggered.connect(self.clicked)
-                
-        stop_action = QAction(QIcon('graphics_Utils/icons/icon_stop.png'), '&Stop', mainwindow)
-        stop_action.setStatusTip('Stop program') # show when move mouse to the icon
-        stop_action.triggered.connect(self.clicked)
-
-           
-        toolbar.addAction(new_action)
-        toolbar.addAction(open_action)
-        toolbar.addAction(save_action)
-        toolbar.addSeparator()
-        toolbar.addAction(start_action)
-        toolbar.addAction(pause_action)
-        toolbar.addAction(stop_action)
-                     
+               
     def _createStatusBar(self,mainwindow):
         status = QStatusBar()
         status.showMessage("Ready")
         mainwindow.setStatusBar(status)
 
-    # Functions to run
-    def canMessageChildWindow(self, state):
-        if state:
-            self.main.canMessageChildWindow(self.MainWindow)
-            self.MainWindow.show()
-        else:
-           self.MainWindow.close()
-    
-    def canSettingsChildWindow(self,state):
-        if state:
-            self.main.canSettingsChildWindow(self.MainWindow)
-            self.MainWindow.show()
-        else:
-           self.MainWindow.close()
-
-    def trendChildWindow(self,state):
-        if state:
-            self.ui.trendChildWindow(self.MainWindow)
-            self.MainWindow.show()
-        else:
-            self.MainWindow.close()
         
     def about(self):
         QMessageBox.about(self,"About",
