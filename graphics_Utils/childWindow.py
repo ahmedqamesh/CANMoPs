@@ -17,7 +17,6 @@ class ChildWindow(QWidget):
 
     def __init__(self, parent=None):
        super(ChildWindow, self).__init__(parent)
-       self.__y = 0
     def outputChildWindow(self, ChildWindow, comunication_object="Normal"):
         ChildWindow.setObjectName("OutputWindow")
         ChildWindow.setWindowTitle("Output Window")
@@ -32,8 +31,7 @@ class ChildWindow(QWidget):
         self.WindowGroupBox.setLayout(logLayout)
         logframe.setLayout(logLayout) 
         
-    def trendChildWindow(self, ChildWindow, data, trending):
-        self.set_data_point(data)
+    def trendChildWindow(self, ChildWindow, trending):
         ChildWindow.setObjectName("OutputWindow")
         ChildWindow.setWindowTitle("Output Window")
         ChildWindow.resize(500, 500)  # w*h
@@ -41,7 +39,7 @@ class ChildWindow(QWidget):
         logframe.setLineWidth(0.6)
         ChildWindow.setCentralWidget(logframe)
         self.WindowGroupBox = QGroupBox("")
-        Fig = dataMonitoring.LiveMonitoringData(data = data , period = 50, trending=trending)
+        Fig = dataMonitoring.LiveMonitoringData(period = 50, trending=trending)
         plotLayout = QVBoxLayout()
         plotLayout.addStretch(1)
         plotLayout.addWidget(Fig)
@@ -60,12 +58,6 @@ class ChildWindow(QWidget):
     # setter method
     def set_clicked(self, x):
         print(x)
-
-    def set_data_point(self, data):
-        self.__y = data
-    
-    def get_data_point(self):
-        return self.__y
             
 if __name__ == "__main__":
     pass

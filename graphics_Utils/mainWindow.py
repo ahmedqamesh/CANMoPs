@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
                          
         self.index_description_items = None
         self.subIndex_description_items = None
+        self.__response =None
     
     def Ui_ApplicationWindow(self, server = None):
         self.menu= menuWindow.MenuBar(self)
@@ -114,7 +115,7 @@ class MainWindow(QMainWindow):
         __interfaceItems = self.__interfaceItems
         self.interfaceComboBox = QComboBox(self)
         for item in __interfaceItems[1:]: self.interfaceComboBox.addItem(item)
-        #self.interfaceComboBox.activated[str].connect(self.set_interface)
+        self.interfaceComboBox.activated[str].connect(self.set_interface)
         
         self.connectButton = QPushButton("")
         self.connectButton.setIcon(QIcon('graphics_Utils/icons/icon_disconnect.jpg'))
@@ -187,7 +188,7 @@ class MainWindow(QMainWindow):
 
     def trendWindow(self,data = None, trending =None):
         self.ui = childWindow.ChildWindow()
-        self.ui.trendChildWindow(self.MainWindow, data, trending)
+        self.ui.trendChildWindow(self.MainWindow, trending)
         self.MainWindow.show()
             
     def deviceWindow(self):
@@ -211,7 +212,6 @@ class MainWindow(QMainWindow):
 
     def set_connect(self):
         interface = self.get_interface()
-        
         self.server.start_channelConnection(interface = interface)
                
     def set_all(self):   
@@ -233,22 +233,20 @@ class MainWindow(QMainWindow):
         subIndex = int(self.get_subIndex(),16)
         nodeId = self.__nodeIds[0]
         interface = self.get_interface()
-        response = self.server.sdoRead(nodeId, index, subIndex,interface,3000)
-        if trending is False:
-            self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = response )
-        else:
-            self.trendWindow(data = response, trending =trending )
+        self.__response = self.server.sdoRead(nodeId, index, subIndex,interface,3000)
+        self.set_data_point( self.__response)
+        self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
     
     def trend_sdo_can(self):
         sleep = 1
         t = 0
-        trend_time = 5
-        self.trendWindow(data = response, trending =trend_time ) 
+        trend_time = 10
+        self.trendWindow(trending =trend_time)
         while t < trend_time:
             time.sleep(sleep)
             t = t+sleep
-            self.send_sdo_can(trending = trend_time)
-    
+            self.send_sdo_can()
+            
     def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
         # printing the read message with cobid = SDO_RX + nodeId
         MAX_DATABYTES =8
@@ -334,7 +332,13 @@ class MainWindow(QMainWindow):
     
     def set_bytes(self,x):
         self.__bytes = x
-        
+    
+    def set_data_point(self, data):
+        self.__response = data
+    
+    def get_data_point(self):
+        return self.__response
+            
     def get_index_items(self):
         return self.__index_items
                
@@ -720,7 +724,8 @@ class MainWindow(QMainWindow):
         trendingButton = QPushButton("")
         trendingButton.setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
         trendingButton.setStatusTip('Data Trending') # show when move mouse to the icon
-        trendingButton.clicked.connect(self.trend_sdo_can)
+        #trendingButton.clicked.connect(self.trend_sdo_can)
+        trendingButton.clicked.connect(self.clicked)
         
         
         HLayout =QHBoxLayout()
