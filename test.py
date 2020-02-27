@@ -26,23 +26,23 @@ def test():
     server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
      
     #Response from the node to master
-    cobid, data, dlc, flag, t = server.readCanMessages()
-    print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
+   # cobid, data, dlc, flag, t = server.readCanMessages()
+    #print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
      
     #write sdo message
-    print('Writing example CAN Expedited read message ...')
+    #print('Writing example CAN Expedited read message ...')
+    
     #Example (1): get node Id
+   #VendorId = server.sdoRead(NodeIds[0], 0x1000,0, interface,1000)
+    #print(f'VendorId: {VendorId:03X}')
     
-    VendorId = server.sdoRead(NodeIds[0], 0x1000,0,interface,1000)
-    print(VendorId, f'VendorId: {VendorId:03X}')
-    
-    #Example (2): print Pspp parameters ( 4 PSPPs)
+    #Example (2): print PSPP parameters (4 PSPPs)
 #     N_PSPP =3
 #     for PSPP in range(0,N_PSPP): # Each i represents one PSPP
 #         Pindex = index+PSPP
-#         monVals = server.sdoRead(NodeIds[0], Pindex,subindex,interface, 3000)
+#         monVals = server.sdoRead(NodeIds[0], Pindex,subindex,interface, 1000)
 #         vals = [(monVals >> i * 10) & (2**10 - 1) for i in range(3)]
-#         print(f'PSPP: {PSPP} ,Temp1: {vals[0]} ,Temp2: {vals[1]} ,Voltage: {vals[2]}')
+#         print(f'PSPP: {PSPP} ,Temp1: {vals[0]} ,Temp2: {vals[1]} ,Voltage: {vals[2]}')    
     # print('Restarting device ...')
     # analib.wrapper.restart(ch.ipAddress)
 

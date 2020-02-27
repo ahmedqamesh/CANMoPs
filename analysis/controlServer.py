@@ -181,6 +181,7 @@ class ControlServer(object):
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
+            self.__canMsgThread.start()
         else:
             ipAddress =self.get_ipAddress()
             bitrate =self.get_bitrate()
@@ -193,7 +194,6 @@ class ControlServer(object):
                 self.__busOn = True
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
-            self.__canMsgThread.start()
         else:
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
@@ -396,9 +396,10 @@ class ControlServer(object):
         messageValid = False
         while time.perf_counter() - t0 < timeout / 1000:
             for i, (cobid_ret, ret, dlc, flag, t) in zip(range(len(self.__canMsgQueue)), self.__canMsgQueue):
-                messageValid = (dlc == 8 and cobid_ret == SDO_TX + nodeId
-                                and ret[0] in [0x80, 0x43, 0x47, 0x4b, 0x4f, 0x42] and
-                                int.from_bytes([ret[1], ret[2]], 'little') == index
+                messageValid = (dlc == 8 
+                                and cobid_ret == SDO_TX + nodeId
+                                and ret[0] in [0x80, 0x43, 0x47, 0x4b, 0x4f, 0x42] 
+                                and int.from_bytes([ret[1], ret[2]], 'little') == index
                                 and ret[3] == subindex)
                 if messageValid:
                     del self.__canMsgQueue[i]
@@ -427,7 +428,6 @@ class ControlServer(object):
 
     def writeCanMessage(self, cobid, msg, flag=0, timeout=None):
         """Combining writing functions for different |CAN| interfaces
-
         Parameters
         ----------
         cobid : :obj:`int`
@@ -444,7 +444,6 @@ class ControlServer(object):
             if timeout is None:
                 timeout = 0xFFFFFFFF
             frame = Frame(id_ = cobid, data = msg)#  from tutorial
-            #self.__ch.write(frame)#  from tutorial
             self.__ch.writeWait(frame,timeout)
         else:
             if not self.__ch.deviceOpen:
@@ -467,14 +466,14 @@ class ControlServer(object):
                     cobid, data, dlc, flag, t = (frame.id, frame.data,
                                                  frame.dlc, frame.flags,
                                                  frame.timestamp)
-                    return cobid, data, dlc, flag, t
                     if frame is None or (cobid == 0 and dlc == 0):
                         raise canlib.CanNoMsg
                 else:
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
-                    return cobid, data, dlc, flag, t
+                    
                 self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
                 self.dumpMessage(cobid, data, dlc, flag)
+                return cobid, data, dlc, flag, t
             except (canlib.CanNoMsg, analib.CanNoMsg):
                 pass
         
@@ -542,7 +541,9 @@ class ControlServer(object):
             msgstr = '{:3X} {:d}   '.format(cobid, dlc)
             for i in range(len(msg)):
                 msgstr += '{:02x}  '.format(msg[i])
-            msgstr += '    ' * (8 - len(msg))        
+            msgstr += '    ' * (8 - len(msg))
+            self.logger.info(coc.MSGHEADER)
+            self.logger.info(msgstr)
                                                   
 if __name__ == "__main__":
     pass
