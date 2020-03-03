@@ -23,11 +23,11 @@ def test():
     Byte3 = subindex = 1 
     #server.start_channelConnection(interface = interface)
     #write CAN message [read dictionary request from master to node]
-    #server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
+    server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
      
     #Response from the node to master
-    #cobid, data, dlc, flag, t = server.readCanMessages()
-    #print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
+    cobid, data, dlc, flag, t = server.readCanMessages()
+    print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
      
     #write sdo message
     #print('Writing example CAN Expedited read message ...')
@@ -49,9 +49,9 @@ def test():
     #analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-    server = controlServer.ControlServer(GUI=None, interface = "AnaGate", start = True)
-    test()
-#     qapp = QtWidgets.QApplication(sys.argv)
-#     app = mainWindow.MainWindow()
-#     app.Ui_ApplicationWindow(server =server)
-#     qapp.exec_()
+    server = controlServer.ControlServer(GUI=None, interface = "Kvaser")
+# test()
+    qapp = QtWidgets.QApplication(sys.argv)
+    app = mainWindow.MainWindow()
+    app.Ui_ApplicationWindow(server =server)
+    qapp.exec_()

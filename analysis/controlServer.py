@@ -46,23 +46,14 @@ class ControlServer(object):
         """:obj:`~logging.Logger`: Main logger for this class"""
         verboselogs.install()
         self.logger = logging.getLogger(__name__)
-        #self.logger.setLevel(logging.DEBUG)
-        #self.controller_logger = logging.getLogger('controller')
-        #self.controller_logger.setLevel(logging.WARNING)
         #log directory
         if logdir is None:
             logdir = os.path.join(rootdir, 'log')
             if not os.path.exists(logdir):
                     os.makedirs(logdir)
         ts = os.path.join(logdir, time.strftime('%Y-%m-%d_%H-%M-%S_controller_Server.'))
-        #self.__fh = RotatingFileHandler(ts + 'log', backupCount=10,
-        #                                maxBytes=10 * 1024 * 1024)
-        #fmt = logging.Formatter(logformat)
-        #fmt.default_msec_format = '%s.%03d'
-        #self.__fh.setFormatter(fmt)
         cl.install(fmt=logformat, level=console_loglevel, isatty=True,milliseconds=True)
-        #self.__fh.setLevel(file_loglevel)
-
+        
         # Read configurations from a file
         if config is None:
             conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-8])
@@ -91,8 +82,8 @@ class ControlServer(object):
         self.__interface = interface
         if bitrate is None:
             bitrate = int(self.__bitrate)
+            
         bitrate = self._parseBitRate(bitrate)   
-        
         # Initialize library and set connection parameters
         """:obj:`bool` : If communication is established"""
         self.__busOn = False  
@@ -109,17 +100,12 @@ class ControlServer(object):
 
         
         """Internal attribute for the |CAN| channel"""
-        if start is not False:
-            #self.start_channelConnection(interface = interface)
-            self.set_canController(interface = interface)
+        self.set_canController(interface = interface)
         
         self.logger.success(str(self))
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
-        #self.__pill2kill = Event()
-        #self.__lock = Lock()
-        #self.__kvaserLock = Lock()
         if GUI is not None:
             self.start_graphicalInterface()
         self.logger.success('... Done!')
@@ -136,22 +122,8 @@ class ControlServer(object):
         else:
             return f'{self.__ch}'
 
-        __repr__ = __str__
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        if exception_type is KeyboardInterrupt:
-            self.logger.warning('Received Ctrl+C event (KeyboardInterrupt).')
-        else:
-            self.logger.exception(exception_value)
-        # self.__ch.setCallback(ct.cast(None, analib.wrapper.dll.CBFUNC))
-        self.stop()
-        logging.shutdown()
-        return True
-        
-           
+        #__repr__ = __str__
+  
     def start_graphicalInterface(self):
         self.logger.notice('Opening a graphical user Interface')
         qapp = QtWidgets.QApplication(sys.argv)
@@ -180,7 +152,6 @@ class ControlServer(object):
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
-            
             self.__canMsgThread.start()
         else:
             if not self.__ch.deviceOpen:
@@ -201,7 +172,7 @@ class ControlServer(object):
         else:
             ipAddress =self.get_ipAddress()
             bitrate =self.get_bitrate()
-            self.__ch = analib.Channel(ipAddress, self.__channel, baudrate=bitrate)            
+            self.__ch = analib.Channel(ipAddress, self.__channel, baudrate=self.__bitrate)            
             self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())#to be commented
             self.__ch.setCallback(self.__cbFunc)     #to be commented    
         self.logger.notice('Starting the channel ...')   
@@ -243,6 +214,8 @@ class ControlServer(object):
         
     def set_interface(self, x):
         self.__interface = x
+        self.__str__()
+        
                 
     def set_nodeIds(self,x):
         self.__nodeIds =x

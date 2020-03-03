@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
         self._createtoolbar(self)
         self.menu._createStatusBar(self)
         self.server = server
-        #self.server = controlServer.ControlServer()
+
         # 1. Window settings
         self.setWindowTitle(self.__appName +"_"+ self.__version)
         self.setWindowIcon(QtGui.QIcon(self.__icon_dir))
@@ -212,7 +212,8 @@ class MainWindow(QMainWindow):
 
     def set_connect(self):
         interface = self.get_interface()
-        self.server.start_channelConnection(interface = interface)
+        self.server.set_interface(interface)
+        self.server.set_canController(interface = interface)
                
     def set_all(self):   
         #self.logger.success('========Setting CAN configurations=======')
@@ -232,8 +233,7 @@ class MainWindow(QMainWindow):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex(),16)
         nodeId = self.__nodeIds[0]
-        interface = self.get_interface()
-        self.__response = self.server.sdoRead(nodeId, index, subIndex,interface,3000)
+        self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
         self.set_data_point( self.__response)
         self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
     
