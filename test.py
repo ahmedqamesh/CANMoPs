@@ -24,19 +24,18 @@ def test():
     #server.start_channelConnection(interface = interface)
     #write CAN message [read dictionary request from master to node]
     server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=1000)
-     
     #Response from the node to master
     cobid, data, dlc, flag, t = server.readCanMessages()
     print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
      
     #write sdo message
     #print('Writing example CAN Expedited read message ...')
-    
+     
     #Example (1): get node Id
     VendorId = server.sdoRead(NodeIds[0], 0x1000,0,1000)
     print(f'VendorId: {VendorId:03X}')
-    
-    #Example (2): print PSPP parameters (4 PSPPs)
+     
+#     #Example (2): print PSPP parameters (4 PSPPs)
     N_PSPP =3
     for PSPP in range(0,N_PSPP): # Each i represents one PSPP
         Pindex = index+PSPP
@@ -49,9 +48,9 @@ def test():
     #analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-    server = controlServer.ControlServer(GUI=None, interface = "Kvaser")
-# test()
-    qapp = QtWidgets.QApplication(sys.argv)
-    app = mainWindow.MainWindow()
-    app.Ui_ApplicationWindow(server =server)
-    qapp.exec_()
+    server = controlServer.ControlServer(GUI=None, interface = "Kvaser", Set_CAN =True)
+    test()
+#     qapp = QtWidgets.QApplication(sys.argv)
+#     app = mainWindow.MainWindow()
+#     app.Ui_ApplicationWindow(server =server)
+#     qapp.exec_()

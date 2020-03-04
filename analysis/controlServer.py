@@ -37,7 +37,7 @@ class ControlServer(object):
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
                  channel =None,ipAddress =None,
-                 GUI = None, start = False, 
+                 GUI = None, Set_CAN = False,
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
         super(ControlServer, self).__init__() # super keyword to call its methods from a subclass:
@@ -100,12 +100,14 @@ class ControlServer(object):
 
         
         """Internal attribute for the |CAN| channel"""
-        self.set_canController(interface = interface)
-        
-        self.logger.success(str(self))
+        if Set_CAN:
+            self.set_canController(interface = interface)
+            self.logger.success(str(self))
+            
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
+        
         if GUI is not None:
             self.start_graphicalInterface()
         self.logger.success('... Done!')
@@ -122,7 +124,6 @@ class ControlServer(object):
         else:
             return f'{self.__ch}'
 
-        #__repr__ = __str__
   
     def start_graphicalInterface(self):
         self.logger.notice('Opening a graphical user Interface')
@@ -142,9 +143,22 @@ class ControlServer(object):
                 raise ValueError(f'Bitrate {bitrate} not in list of allowed '
                                  f'values!')
             return bitrate
-    
+
+    def set_canController(self, interface = None):
+        self.logger.notice('Setting the channel ...')   
+        if interface == 'Kvaser':
+            self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
+            self.__ch.setBusParams(self.__bitrate)
+            self.logger.notice('Going in \'Bus On\' state ...')
+            self.__ch.busOn()
+            self.__canMsgThread = Thread(target=self.readCanMessages)
+        else:
+            #ipAddress =self.get_ipAddress()
+            #bitrate =self.get_bitrate()
+            self.__ch = analib.Channel(self.__ipAddress, self.__channel, baudrate=self.__bitrate)
+                            
     def start_channelConnection(self, interface = None):
-        self.logger.notice('Opening CAN channel ...')
+        self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
             self.__ch.setBusOutputControl(canlib.Driver.NORMAL)# New from tutorial
@@ -160,23 +174,11 @@ class ControlServer(object):
             if self.__ch.state != 'CONNECTED':
                 self.logger.notice('Restarting AnaGate CAN interface.')
                 self.__ch.restart()
-                time.sleep(10)            
+                time.sleep(10)   
+            self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
+            self.__ch.setCallback(self.__cbFunc)  
 
-    def set_canController(self, interface = None):
-        if interface == 'Kvaser':
-            self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            self.__ch.setBusParams(self.__bitrate)
-            self.logger.notice('Going in \'Bus On\' state ...')
-            self.__ch.busOn()
-
-        else:
-            ipAddress =self.get_ipAddress()
-            bitrate =self.get_bitrate()
-            self.__ch = analib.Channel(ipAddress, self.__channel, baudrate=self.__bitrate)            
-            self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())#to be commented
-            self.__ch.setCallback(self.__cbFunc)     #to be commented    
-        self.logger.notice('Starting the channel ...')   
-
+        
     def stop(self):
         """Close |CAN| channel and stop the |OPCUA| server
         Make sure that this is called so that the connection is closed in a
@@ -378,7 +380,6 @@ class ControlServer(object):
         SDO_TX =0x580  
         SDO_RX = 0x600
         interface = self.get_interface()
-        #self.set_canController(interface=interface)
         self.start_channelConnection(interface=interface)
         if nodeId is None or index is None or subindex is None:
             self.logger.warning('SDO read protocol cancelled before it could begin.')         
@@ -451,7 +452,7 @@ class ControlServer(object):
             self.__ch.writeWait(frame,timeout)
         else:
             if not self.__ch.deviceOpen:
-                self.logger.notice('Reopening AnaGate CAN interface')           
+                self.logger.notice('Reopening AnaGate CAN interface')          
             self.__ch.write(cobid, msg, flag)
 
     def readCanMessages(self):
@@ -474,7 +475,6 @@ class ControlServer(object):
                         raise canlib.CanNoMsg
                 else:
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
-                    
                 self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
                 self.dumpMessage(cobid, data, dlc, flag)
                 return cobid, data, dlc, flag, t
@@ -521,6 +521,7 @@ class ControlServer(object):
             t = time.time()
             self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
             self.dumpMessage(cobid, data, dlc, flag)
+        
         return cbFunc
     
     def dumpMessage(self,cobid, msg, dlc, flag):
@@ -538,7 +539,6 @@ class ControlServer(object):
             Flags, a combination of the :const:`canMSG_xxx` and
             :const:`canMSGERR_xxx` values
         """
-    
         if (flag & canlib.canMSG_ERROR_FRAME != 0):
             print("***ERROR FRAME RECEIVED***")
         else:
