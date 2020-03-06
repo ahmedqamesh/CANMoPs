@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         self.configureDeviceBox()
         self.MainWindow = QMainWindow()
         self.logger = logging.getLogger(__name__)
-        
+       
         #Start with default settings
         config_dir = "config/"
         
@@ -73,12 +73,12 @@ class MainWindow(QMainWindow):
         self.subIndex_description_items = None
         self.__response =None
     
-    def Ui_ApplicationWindow(self, server = None):
+    def Ui_ApplicationWindow(self):
         self.menu= menuWindow.MenuBar(self)
         self.menu._createMenu(self)
         self._createtoolbar(self)
         self.menu._createStatusBar(self)
-        self.server = server
+        self.server = controlServer.ControlServer()
 
         # 1. Window settings
         self.setWindowTitle(self.__appName +"_"+ self.__version)
@@ -119,15 +119,14 @@ class MainWindow(QMainWindow):
         
         self.connectButton = QPushButton("")
         self.connectButton.setIcon(QIcon('graphics_Utils/icons/icon_disconnect.jpg'))
-        icon = QIcon()
-        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_disconnect.jpg'),  QIcon.Normal, QIcon.Off)
-        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_connect.jpg'), QIcon.Normal,  QIcon.On)
         
+        icon = QIcon()
+        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_connect.jpg'), QIcon.Normal,  QIcon.On)
+        icon.addPixmap(QPixmap('graphics_Utils/icons/icon_disconnect.jpg'),  QIcon.Normal, QIcon.Off)
         self.connectButton.setIcon(icon)
         self.connectButton.setCheckable(True)
         self.connectButton.clicked.connect(self.set_connect)
-        
-        
+
         self.GridLayout =QGridLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
@@ -211,16 +210,20 @@ class MainWindow(QMainWindow):
 
 
     def set_connect(self):
-        interface = self.get_interface()
-        self.server.set_interface(interface)
-        self.server.set_canController(interface = interface)
-               
+        if self.connectButton.isChecked():
+            interface = self.get_interface()
+            self.server.set_interface(interface)
+            self.server.set_canController(interface = interface)
+        else:
+           self.server.stop()
+
     def set_all(self):   
         #self.logger.success('========Setting CAN configurations=======')
         ipAddress = self.get_ipAddress()
         bitrate = self.get_bitrate()
         interface = self.get_interface()
-        #self.server.set_interface(interface)
+        
+        self.server.set_interface(interface)
         self.server.set_bitrate(bitrate)
         self.server.set_ipAddress(ipAddress)
         self.server.start_channelConnection(interface = interface)
@@ -549,6 +552,7 @@ class MainWindow(QMainWindow):
             thirdComboBox = QComboBox(ChildWindow)
             for item in thirdItems: thirdComboBox.addItem(item)
             thirdComboBox.activated[str].connect(self.set_bitrate)
+            
             SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
             
         if (interface == "AnaGate"):

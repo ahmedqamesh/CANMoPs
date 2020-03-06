@@ -68,7 +68,7 @@ class ControlServer(object):
         self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
         self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
-        self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
+        self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
 
                 
@@ -81,7 +81,7 @@ class ControlServer(object):
                              f'"AnaGate" and not "{interface}".')
         self.__interface = interface
         if bitrate is None:
-            bitrate = int(self.__bitrate)
+            bitrate = self.__bitrate
             
         bitrate = self._parseBitRate(bitrate)   
         # Initialize library and set connection parameters
@@ -145,18 +145,16 @@ class ControlServer(object):
             return bitrate
 
     def set_canController(self, interface = None):
-        self.logger.notice('Setting the channel ...')   
+        self.logger.notice('Setting the channel ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            self.__ch.setBusParams(self.__bitrate)
+            #self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
         else:
-            #ipAddress =self.get_ipAddress()
-            #bitrate =self.get_bitrate()
-            self.__ch = analib.Channel(self.__ipAddress, self.__channel, baudrate=self.__bitrate)
-                            
+            self.__ch = analib.Channel(self.__ipAddress, self.__channel, baudrate=self.__bitrate)           
+    
     def start_channelConnection(self, interface = None):
         self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
@@ -185,6 +183,7 @@ class ControlServer(object):
         correct manner. When this class is used within a :obj:`with` statement
         this method is called automatically when the statement is exited.
         """
+        self.logger.warning('Closing the CAN channel.')
         if self.__busOn:
             if self.__interface == 'Kvaser':
                 try:
@@ -196,7 +195,6 @@ class ControlServer(object):
             else:
                 pass
             self.__busOn = False
-            self.logger.warning('Closing the CAN channel.')
             self.__ch.close()
         self.logger.warning('Stopping the server.')
 
@@ -215,6 +213,7 @@ class ControlServer(object):
         self.__bytes = x
         
     def set_interface(self, x):
+        self.logger.success('Setting the interface to %s' %x)
         self.__interface = x
         self.__str__()
         
@@ -229,7 +228,6 @@ class ControlServer(object):
         self.__ipAddress = x
         
     def set_bitrate(self,bitrate):
-        
         if self.__interface == 'Kvaser':
             self.stop()
             self.__bitrate = bitrate
