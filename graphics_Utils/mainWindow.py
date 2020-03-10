@@ -218,15 +218,15 @@ class MainWindow(QMainWindow):
            self.server.stop()
 
     def set_all(self):   
-        #self.logger.success('========Setting CAN configurations=======')
-        ipAddress = self.get_ipAddress()
         bitrate = self.get_bitrate()
         interface = self.get_interface()
-        
-        self.server.set_interface(interface)
+        if interface !="Kvaser":
+            ipAddress = self.get_ipAddress()
+            self.server.set_ipAddress(ipAddress)
+            
         self.server.set_bitrate(bitrate)
-        self.server.set_ipAddress(ipAddress)
-        self.server.start_channelConnection(interface = interface)
+        self.server.set_interface(interface)
+        self.server.set_canController(interface = interface)
         
     '''
     Define can communication messages
@@ -470,9 +470,6 @@ class MainWindow(QMainWindow):
         
         # Another group will be here for Bus parameters
         self.BusParametersGroupBox()
-        def set_ip():
-            self.set_ipAddress(self.firsttextboxvalue)
-        
         modeLabel = QLabel("CAN Mode:", ChildWindow)
         modeLabel.setText("CAN Mode:")
         modeitems = ["CAN"]
@@ -487,7 +484,6 @@ class MainWindow(QMainWindow):
         HGridLayout = QGridLayout()  
         set_button = QPushButton("Set in all")
         set_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
-        set_button.clicked.connect(set_ip)
         set_button.clicked.connect(self.set_all)
 
         setLabel = QLabel("Set same bit rate in all CAN controllers", ChildWindow)
@@ -538,9 +534,10 @@ class MainWindow(QMainWindow):
         thirdLabel = QLabel("thirdLabel", ChildWindow)
         firstComboBox = QComboBox(ChildWindow)
         if (interface == "Kvaser"):
-            firstLabel.setText("Bus Speed:")
-            firstItems = ["1000 kbit/s, 75.0%", "500 kbit/s, 75.0%", "250 kbit/s, 75.0%", " 125 kbit/s, 75.0%", "100 kbit/s, 75.0%", "83.333 kbit/s, 75.0%", "62.500 kbit/s, 75.0%", "50 kbit/s, 75.0%", "33.333 kbit/s, 75.0%" ]
+            firstLabel.setText("")
+            firstItems = self.get_bitrate_items() 
             for item in firstItems: firstComboBox.addItem(item)
+
             firstComboBox.activated[str].connect(self.clicked)
             secondLabel.setText("SJW:")
             secondItems = ["1", "2", "3", "4"]
@@ -553,8 +550,6 @@ class MainWindow(QMainWindow):
             for item in thirdItems: thirdComboBox.addItem(item)
             thirdComboBox.activated[str].connect(self.set_bitrate)
             
-            SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
-            
         if (interface == "AnaGate"):
             firstLabel.setText("IP address")
             ipAddress = self.get_ipAddress()
@@ -565,7 +560,8 @@ class MainWindow(QMainWindow):
             secondItems = ["1", "2", "3", "4"]
             secondComboBox = QComboBox(ChildWindow)
             for item in secondItems: secondComboBox.addItem(item)
-            #secondComboBox.activated[str].connect(self.clicked)
+            secondComboBox.activated[str].connect(self.clicked)
+            
             thirdLabel.setText("Bit Timing:")
             thirdItems = self.get_bitrate_items()
             thirdComboBox = QComboBox(ChildWindow)
@@ -583,7 +579,7 @@ class MainWindow(QMainWindow):
             seconditems = [""]
             secondComboBox = QComboBox(ChildWindow)
             for item in seconditems: secondComboBox.addItem(item)
-            #secondComboBox.activated[str].connect(self.clicked)
+            secondComboBox.activated[str].connect(self.clicked)
             thirdLabel.setText("")
             thirdItems = [""]
             thirdComboBox = QComboBox(ChildWindow)

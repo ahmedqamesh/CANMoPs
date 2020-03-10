@@ -233,8 +233,8 @@ class ControlServer(object):
             self.__bitrate = bitrate
             self.start()
         else:
-            #self.__bitrate = bitrate 
-            self.__ch.baudrate = bitrate
+            self.__bitrate = bitrate 
+            #self.__ch.baudrate = bitrate
             
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
