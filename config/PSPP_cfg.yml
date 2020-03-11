@@ -1,6 +1,6 @@
 Application:
     device_name             :   'PSPP'
-    device_version          :   "v1.0"
+    device_version          :   "v3.0"
     icon_dir                :   "graphics_Utils/icons/icon_pspp.png"
     nodeIds                 :   [8]
     index_items             :   {

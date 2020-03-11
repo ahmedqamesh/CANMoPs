@@ -1,3 +1,8 @@
+Application:
+    app_name             :   'CAN-MoPS'
+    app_version          :   "v1.0"
+    app_icon_dir         :   "graphics_Utils/icons/icon_mops.png"   
+
 CAN_settings:
         nodeIds: [8]
 
@@ -21,8 +26,10 @@ CAN_Interface:
     Kvaser  :
         name        :   'Kvaser'
         bitrate     :   125000
-        ipAddress   :   '192.168.1.254'
         timeout     :   500
         channel     :   0
+
+Devices:    ["None"] 
+    
 Other:
     user    :   "Ahmed Qamesh"

@@ -9,6 +9,7 @@ from analysis import logger
 import numpy as np
 import os
 import binascii
+import yaml
 import logging
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 
@@ -38,13 +39,56 @@ class ChildWindow(QWidget):
         logframe = QFrame(ChildWindow)
         logframe.setLineWidth(0.6)
         ChildWindow.setCentralWidget(logframe)
+        trendLayout = QGridLayout()
         self.WindowGroupBox = QGroupBox("")
         Fig = dataMonitoring.LiveMonitoringData(period = 50, trending=trending)
-        plotLayout = QVBoxLayout()
-        plotLayout.addStretch(1)
-        plotLayout.addWidget(Fig)
-        self.WindowGroupBox.setLayout(plotLayout)
-        logframe.setLayout(plotLayout) 
+        #plotLayout = QVBoxLayout()
+        #plotLayout.addStretch(1)
+        #plotLayout.addWidget(Fig)
+        HBox = QHBoxLayout()
+        timeTextBox = QLineEdit("50", self)
+               
+        start_button = QPushButton("")
+        start_button.setIcon(QIcon('graphics_Utils/icons/icon_start.png' ))
+        start_button.clicked.connect(self.clicked)
+        
+        pause_button = QPushButton("")
+        pause_button.setIcon(QIcon('graphics_Utils/icons/icon_pause.png' ))
+        pause_button.clicked.connect(self.clicked)
+        
+        stop_button = QPushButton("")
+        stop_button.setIcon(QIcon('graphics_Utils/icons/icon_stop.png' ))
+        stop_button.clicked.connect(self.clicked)        
+        
+        HBox.addWidget(timeTextBox) 
+        HBox.addWidget(start_button)
+        HBox.addWidget(pause_button)
+        HBox.addWidget(stop_button)
+        
+        indexLabel = QLabel("Period[s]", self)
+        indexLabel.setText("Period [s]")
+        
+        startLabel = QLabel("Start", self)
+        startLabel.setText("Start")
+        
+        pauseLabel = QLabel("Pause", self)
+        pauseLabel.setText("Pause")
+        
+        stopLabel = QLabel("Stop", self)
+        stopLabel.setText("Stop")
+                
+        HLabelBox = QHBoxLayout()
+        HLabelBox.addWidget(indexLabel)
+        HLabelBox.addWidget(startLabel)
+        HLabelBox.addWidget(pauseLabel)
+        HLabelBox.addWidget(stopLabel)
+         
+        trendLayout.addWidget(Fig, 0, 0)
+        trendLayout.addLayout(HLabelBox, 1,0)
+        trendLayout.addLayout(HBox, 2,0)
+        
+        self.WindowGroupBox.setLayout(trendLayout)
+        logframe.setLayout(trendLayout) 
 
     def _createStatusBar(self, childwindow):
         status = QStatusBar()
@@ -58,7 +102,13 @@ class ChildWindow(QWidget):
     # setter method
     def set_clicked(self, x):
         print(x)
-            
+    
+    def open(self):
+        filename = QFileDialog.getOpenFileName(self, 'Open File')
+        with open(filename[0], 'r') as ymlfile:
+            cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+        return cfg
+                 
 if __name__ == "__main__":
     pass
 

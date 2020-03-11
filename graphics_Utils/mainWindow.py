@@ -33,17 +33,17 @@ class MainWindow(QMainWindow):
                  main_config = ["main_cfg.yml"]):
         super(MainWindow, self).__init__(parent)
         self.__device_config = device_config            
-        #Show a textBox
-        self.textBoxWindow()
-        self.configureDeviceBox()
-        self.MainWindow = QMainWindow()
         self.logger = logging.getLogger(__name__)
-       
+        
+        self.child = childWindow.ChildWindow() 
         #Start with default settings
         config_dir = "config/"
         
         # Read configurations from a file    
         conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-14])
+        self.__appName          =   conf["Application"]["app_name"] 
+        self.__appVersion       =   conf['Application']['app_version']
+        self.__appIconDir       =   conf["Application"]["app_icon_dir"]        
         self._index_items       =   conf["default_values"]["index_items"]
         self.__interfaceItems   =   conf['default_values']["interface_items"]        
         self.__bitrate_items    =   conf['default_values']['bitrate_items']
@@ -57,21 +57,26 @@ class MainWindow(QMainWindow):
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate          =   conf['CAN_Interface']['AnaGate']['bitrate']
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
-        
-        #Load the configuration file
-        if device_config is not None: 
-            for device in device_config: 
-                dev = analysis_utils.open_yaml_file(file =config_dir+device,directory =rootdir[:-14])
-            self.__appName          = dev["Application"]["device_name"] 
-            self.__version          = dev['Application']['device_version']
-            self.__icon_dir          = dev["Application"]["icon_dir"]
-            self.__nodeIds          = dev["Application"]["nodeIds"]
-            self.__dictionary_items = dev["Application"]["index_items"]
-            self.__index_items = list(self.__dictionary_items.keys())
-                         
+        self.__devices          =   conf["Devices"]
+
+        self.configureDeviceBox(None)
         self.index_description_items = None
         self.subIndex_description_items = None
         self.__response =None
+        
+        #Show a textBox
+        self.textBoxWindow()
+        
+        self.MainWindow = QMainWindow()
+    
+    def devices_configuration(self,dev):
+        self.__appName          = dev["Application"]["device_name"] 
+        self.__version          = dev['Application']['device_version']
+        self.__icon_dir         = dev["Application"]["icon_dir"]
+        self.__nodeIds          = dev["Application"]["nodeIds"]
+        self.__dictionary_items = dev["Application"]["index_items"]
+        self.__index_items = list(self.__dictionary_items.keys())
+        return  self.__appName, self.__version, self.__icon_dir, self.__nodeIds, self.__dictionary_items      
     
     def Ui_ApplicationWindow(self):
         self.menu= menuWindow.MenuBar(self)
@@ -79,10 +84,10 @@ class MainWindow(QMainWindow):
         self._createtoolbar(self)
         self.menu._createStatusBar(self)
         self.server = controlServer.ControlServer()
-
+    
         # 1. Window settings
-        self.setWindowTitle(self.__appName +"_"+ self.__version)
-        self.setWindowIcon(QtGui.QIcon(self.__icon_dir))
+        self.setWindowTitle(self.__appName +"_"+ self.__appVersion)
+        self.setWindowIcon(QtGui.QIcon(self.__appIconDir))
         self.adjustSize()
         # call widgets
         self.createProgressBar()
@@ -93,15 +98,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(mainFrame)
     
         # SetLayout
-        mainLayout = QGridLayout()
-        mainLayout.addWidget(self.interfaceComboBox,0,0)
-        mainLayout.addWidget(self.connectButton,0,1)
+        self.mainLayout = QGridLayout()
+        self.mainLayout.addWidget(self.interfaceComboBox,0,0)
+        self.mainLayout.addWidget(self.connectButton,0,1)
         
-        mainLayout.addLayout(self.GridLayout,1,0)
-        mainLayout.addWidget(self.textBox,2,0)
-        mainLayout.addLayout(self.HLayout,3,0)
+        self.mainLayout.addLayout(self.GridLayout,1,0)
+        self.mainLayout.addWidget(self.textBox,2,0)
+        self.mainLayout.addLayout(self.HLayout,3,0)
         #mainLayout.addWidget(self.progressBar,2,0)
-        mainFrame.setLayout(mainLayout)
+        mainFrame.setLayout(self.mainLayout)
         # 3. Show
         self.show()
         return
@@ -137,7 +142,7 @@ class MainWindow(QMainWindow):
 
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
-        self.mainIndexTextBox = QLineEdit(self.__index_items[1], self)
+        self.mainIndexTextBox = QLineEdit("0x1000", self)
         #self.indexTextBox.textChanged.connect(self.set_index)
         
         subIndexLabel = QLabel("    SubIndex", self)
@@ -164,17 +169,35 @@ class MainWindow(QMainWindow):
         self.set_index(self.mainIndexTextBox.text())
         self.set_subIndex(self.mainSubIndextextbox.text())
 
-               
-    def configureDeviceBox(self):
+    def configureDeviceBox(self,conf):
         self.HLayout =QHBoxLayout()
         deviceLabel = QLabel("Configure Device", self)
         deviceLabel.setText("Configure Device")
-        deviceButton = QPushButton("")
-        deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
         self.HLayout.addWidget(deviceLabel)
-        self.HLayout.addWidget(deviceButton)
-        deviceButton.clicked.connect(self.deviceWindow)   
+        for device in self.__devices:
+            self.deviceButton= QPushButton("")
+            if device == "None":
+                self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
+                self.deviceButton.clicked.connect(self.update_device_menu)
+            else:
+                appName, version, icon_dir, nodeIds, dictionary_items = self.devices_configuration(conf)
+                self.set_appName(appName)
+                self.set_version(version)
+                self.set_icon_dir(icon_dir)
+                self.set_nodeIds(nodeIds)
+                self.set_dictionary_items(dictionary_items)                
+                self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
+                self.deviceButton.clicked.connect(self.deviceWindow)                
+            self.HLayout.addWidget(self.deviceButton)
 
+    def update_device_menu(self):
+        conf = self.child.open()
+        self.HLayout.removeWidget(self.deviceButton)
+        self.deviceButton.deleteLater()
+        self.__devices.append(conf["Application"]["device_name"])
+        self.configureDeviceBox(conf)
+        self.mainLayout.addLayout(self.HLayout,3,0)
+        
     # Functions to run
     def canMessageWindow(self):
         self.canMessageChildWindow(self.MainWindow)
@@ -245,10 +268,10 @@ class MainWindow(QMainWindow):
         t = 0
         trend_time = 10
         self.trendWindow(trending =trend_time)
-        while t < trend_time:
-            time.sleep(sleep)
-            t = t+sleep
-            self.send_sdo_can()
+        #while t < trend_time:
+        #    time.sleep(sleep)
+        #    t = t+sleep
+        #    self.send_sdo_can()
             
     def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
         # printing the read message with cobid = SDO_RX + nodeId
@@ -261,7 +284,7 @@ class MainWindow(QMainWindow):
         #printing response 
         self.set_textBox_message(comunication_object = "SDO_TX", msg =str(response_from_node))
         #print decoded response
-        decoded_response = f'{response_from_node:03X}\n-------------------------------------------'
+        decoded_response = f'{response_from_node:03X}\n-----------------------------------'
         self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
             
     def send_can(self):
@@ -306,6 +329,21 @@ class MainWindow(QMainWindow):
             subindex = self.subIndexListBox.currentItem().text()
             self.set_subIndex(subindex)
 
+    def set_appName(self,x):
+        self.__appName = x
+        
+    def set_version(self,x):
+        self.__version = x
+        
+    def set_icon_dir(self,x):
+        self.__icon_dir = x
+    
+    def set_dictionary_items(self,x):
+        self.__dictionary_items = x
+
+    def set_nodeIds(self,x):
+        self.__nodeId =x
+                        
     def set_interfaceItems(self, x):
         self.__interfaceItems =x  
            
@@ -359,6 +397,7 @@ class MainWindow(QMainWindow):
     
     def get_appName(self):
         return self.__appName
+
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
         return ret
@@ -693,18 +732,18 @@ class MainWindow(QMainWindow):
         firstVLayout = QVBoxLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
-        nodeItems = list(map(str, self.__nodeIds))
+        nodeItems = list(map(str, self.get_nodeIds()))
         nodeComboBox = QComboBox(self)
         for item in nodeItems: nodeComboBox.addItem(item)
         nodeComboBox.activated[str].connect(self.set_nodeId)
         icon = QLabel(self)
-        pixmap = QPixmap(self.__icon_dir)
+        pixmap = QPixmap(self.get_icon_dir())
         icon.setPixmap(pixmap.scaled(100, 100))
         
         device_title = QLabel("    device", self)
         newfont = QFont("Times", 12, QtGui.QFont.Bold)
         device_title.setFont(newfont)
-        device_title.setText("         " + self.get_appName())
+        device_title.setText("        " + self.get_appName())
         
         firstVLayout.addWidget(nodeComboBox)
         firstVLayout.addWidget(icon)
@@ -712,7 +751,6 @@ class MainWindow(QMainWindow):
 
         VLayout = QVBoxLayout()
         self.indexTextBox = QTextEdit("", self)
-        # indexTextBox = QPlainTextEdit("Info", self)
         self.indexTextBox.setStyleSheet("background-color: white; border: 2px inset black; min-height: 150px; min-width: 400px;")
         self.indexTextBox.LineWrapMode(1)
         self.indexTextBox.setReadOnly(True)       
@@ -724,8 +762,8 @@ class MainWindow(QMainWindow):
         trendingButton = QPushButton("")
         trendingButton.setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
         trendingButton.setStatusTip('Data Trending') # show when move mouse to the icon
-        #trendingButton.clicked.connect(self.trend_sdo_can)
-        trendingButton.clicked.connect(self.clicked)
+        trendingButton.clicked.connect(self.trend_sdo_can)
+        #trendingButton.clicked.connect(self.clicked)
         
         
         HLayout =QHBoxLayout()

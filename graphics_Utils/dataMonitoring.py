@@ -61,9 +61,9 @@ class LiveMonitoringData(QtWidgets.QMainWindow):
     def update_figure(self):
         self.x = self.x[1:]  # Remove the first y element.
         self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
-        #data = randint(0,100)
-        data = self.main.get_data_point()
-        print(data)
+        data = randint(0,100)
+        #data = self.main.get_data_point()
+        #print(data)
         self.y = self.y[1:]  # Remove the first 
         self.y.append(data)  # Add a new random value.
         self.data_line.setData(self.x, self.y)  # Update the data.
