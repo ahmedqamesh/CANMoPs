@@ -18,7 +18,7 @@ import matplotlib as mpl
 import numpy as np
 from matplotlib.figure import Figure
 from graphics_Utils import dataMonitoring , menuWindow ,logWindow, childWindow
-from analysis import logger, analysis_utils ,controlServer
+from analysis import analysis_utils ,controlServer
 from analysis import CANopenConstants as coc
 import binascii
 # Third party modules

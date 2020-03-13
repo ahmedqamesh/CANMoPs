@@ -49,5 +49,4 @@ def test(NodeIds = None, interface = None,  SDO_RX = 0x600,index = 0x2200, Bytes
     # analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-    server = controlServer.ControlServer(GUI=None)
     test()

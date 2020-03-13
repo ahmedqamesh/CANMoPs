@@ -5,7 +5,7 @@ from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
 from PyQt5 import QtGui
 from graphics_Utils import dataMonitoring , logWindow 
-from analysis import logger
+
 import numpy as np
 import os
 import binascii

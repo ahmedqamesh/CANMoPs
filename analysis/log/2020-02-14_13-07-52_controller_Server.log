@@ -1,6 +1,0 @@
-2020-02-14 13:07:52.765 - analysis.controlServer - INFO - Existing logging Handler: [<RotatingFileHandler /home/dcs/git/Mops_daq/analysis/log/2020-02-14_13-07-52_controller_Server.log (INFO)>]
-2020-02-14 13:07:52.765 - analysis.controlServer - INFO - fsdfdsfdsfdsfdsfdsfds
-2020-02-14 13:07:52.766 - analysis.controlServer - NOTICE - Read configuration file ...
-2020-02-14 13:07:52.768 - analysis.controlServer - SUCCESS - ... Done!
-2020-02-14 13:07:52.768 - analysis.controlServer - SUCCESS - analysis.controlServer
-2020-02-14 13:07:52.768 - analysis.controlServer - INFO - DLL versionAnagate CAN DLL V1.11-2.13

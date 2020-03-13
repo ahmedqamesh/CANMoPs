@@ -8,8 +8,7 @@ from matplotlib.backends.qt_compat import QtCore, QtWidgets
 from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
-from analysis import logger, analysis_utils
-from analysis import controlServer
+from analysis import controlServer, analysis_utils
 from graphics_Utils import  mainWindow
 rootdir = os.path.dirname(os.path.abspath(__file__))
 def test():

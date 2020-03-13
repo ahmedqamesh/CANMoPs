@@ -18,8 +18,6 @@ from analysis import CANopenConstants as coc
 # Third party modules
 from collections import deque, Counter
 import ctypes as ct
-
-from analysis import logger
 import logging
 from logging.handlers import RotatingFileHandler
 import verboselogs
@@ -28,7 +26,7 @@ from canlib import canlib, Frame
 from canlib.canlib.exceptions import CanGeneralError
 from canlib.canlib import ChannelData
 import analib
-rootdir = os.path.dirname(os.path.abspath(__file__)) # This is your Project Root Directory [ALTERNATIVE root = analysis_utils.get_project_root()]
+rootdir = os.path.dirname(os.path.abspath(__file__))
 #log = logger.setup_derived_logger('Control Server')
 class ControlServer(object):
     def __init__(self, parent=None, 
