@@ -1,10 +1,9 @@
 Application:
-    device_name             :   'MoPs'
+    device_name             :   'MoPS'
     device_version          :   "v1.0"
     icon_dir                :   "graphics_Utils/icons/icon_mops.png"
     nodeIds                 :   [8]
-   nodeIds                 :   [8]
-   index_items             :   {
+    index_items             :   {
                                 "------" :  {"description_items" :"<html><b>-----</b></html>",
                                              "subindex_items"    :{     "-----":"<html><b>-----</b></html>"}} 
                                ,"0x1000" :  {"description_items" :"<html><b> Device type</b> [Default 191(hex)]</b></html>",

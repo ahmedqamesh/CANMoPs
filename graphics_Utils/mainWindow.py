@@ -173,49 +173,51 @@ class MainWindow(QMainWindow):
         self.HLayout =QHBoxLayout()
         deviceLabel = QLabel("Configure Device", self)
         deviceLabel.setText("Configure Device")
+        self.deviceButton= QPushButton("")
+        self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
+        self.deviceButton.clicked.connect(self.update_device_menu)
         self.HLayout.addWidget(deviceLabel)
-        for device in self.__devices:
-            self.deviceButton= QPushButton("")
-            if device == "None":
-                self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
-                self.deviceButton.clicked.connect(self.update_device_menu)
-            else:
-                appName, version, icon_dir, nodeIds, dictionary_items = self.devices_configuration(conf)
-                self.set_appName(appName)
-                self.set_version(version)
-                self.set_icon_dir(icon_dir)
-                self.set_nodeIds(nodeIds)
-                self.set_dictionary_items(dictionary_items)                
-                self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
-                self.deviceButton.clicked.connect(self.deviceWindow)                
-            self.HLayout.addWidget(self.deviceButton)
+        self.HLayout.addWidget(self.deviceButton)
 
     def update_device_menu(self):
         conf = self.child.open()
-        self.HLayout.removeWidget(self.deviceButton)
-        self.deviceButton.deleteLater()
+        #self.deviceButton = None
         self.__devices.append(conf["Application"]["device_name"])
-        self.configureDeviceBox(conf)
-        self.mainLayout.addLayout(self.HLayout,3,0)
-        
+        #self.deviceButton.deleteLater()
+        self.HLayout.removeWidget(self.deviceButton)
+        self.deviceButton= QPushButton("")
+        appName, version, icon_dir, nodeIds, dictionary_items = self.devices_configuration(conf)
+        self.set_appName(appName)
+        self.set_version(version)
+        self.set_icon_dir(icon_dir)
+        self.set_nodeIds(nodeIds)
+        self.set_dictionary_items(dictionary_items)                
+        self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
+        self.deviceButton.clicked.connect(self.deviceWindow)
+        self.HLayout.addWidget(self.deviceButton)
+        #self.mainLayout.addLayout(self.HLayout,3,0)
+      
     # Functions to run
     def canMessageWindow(self):
-        self.canMessageChildWindow(self.MainWindow)
-        self.MainWindow.show()
+        self.MessageWindow = QMainWindow()
+        self.canMessageChildWindow(self.MessageWindow)
+        self.MessageWindow.show()
 
-    
     def canSettingsWindow(self):
-        self.canSettingsChildWindow(self.MainWindow)
-        self.MainWindow.show()
+        MainWindow = QMainWindow()
+        self.canSettingsChildWindow(MainWindow)
+        MainWindow.show()
 
     def trendWindow(self,data = None, trending =None):
+        self.trendWindow = QMainWindow()
         self.ui = childWindow.ChildWindow()
-        self.ui.trendChildWindow(self.MainWindow, trending)
-        self.MainWindow.show()
+        self.ui.trendChildWindow(self.trendWindow, trending)
+        self.trendWindow.show()
             
     def deviceWindow(self):
-        self.deviceChildWindow(self.MainWindow)
-        self.MainWindow.show()
+        self.deviceWindow = QMainWindow()
+        self.deviceChildWindow(self.deviceWindow)
+        self.deviceWindow.show()
         
     def createProgressBar(self):
         self.progressBar = QProgressBar()
@@ -259,10 +261,16 @@ class MainWindow(QMainWindow):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex(),16)
         nodeId = self.__nodeIds[0]
-        self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
-        self.set_data_point( self.__response)
-        self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
+        try:   
+            self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
+            self.set_data_point( self.__response)
+            self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
+        except Exception:
+            self.error_message(text = "Make sure that the CAN interface is connected")
     
+    def error_message(self, text=False):
+        QMessageBox.about(self,"Error Message",text)
+        
     def trend_sdo_can(self):
         sleep = 1
         t = 0
@@ -288,20 +296,21 @@ class MainWindow(QMainWindow):
         self.set_textBox_message(comunication_object = "Decoded", msg =decoded_response)
             
     def send_can(self):
-        cobid = int(self.get_cobid(),16)
-        bytes =list(map(int, self.get_bytes()))
-        #Send the can Message
-        self.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
-        self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
-        # receive the message
-        self.read_can()
-    
+        try:
+            cobid = int(self.get_cobid(),16)
+            bytes =list(map(int, self.get_bytes()))
+            #Send the can Message
+            self.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
+            self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
+            # receive the message
+            self.read_can()
+        except Exception:
+            self.error_message(text = "Make sure that the CAN interface is connected")
 
     def read_can(self):
         cobid, data, dlc, flag, t = self.server.readCanMessages()
         self.set_textBox_message(comunication_object = "SDO_TX", msg =str(data))
     
-
     '''
     Define set/get functions
     '''
@@ -635,14 +644,17 @@ class MainWindow(QMainWindow):
         self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
 
     def canMessageChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("canMessageChildWindow")
+        ChildWindow.setObjectName("CANMessage")
         ChildWindow.setWindowTitle("CAN Message")
         ChildWindow.resize(310, 600)  # w*h
+        MainLayout = QGridLayout()
+        
         # Define a frame for that group
         plotframe = QFrame(ChildWindow)
         plotframe.setLineWidth(0.6)
-        MainLayout = QGridLayout()
+        ChildWindow.setCentralWidget(plotframe)
         
+        # Define First Group
         FirstGroupBox = QGroupBox("")
         # comboBox and label for channel
         FirstGridLayout = QGridLayout() 
@@ -652,7 +664,6 @@ class MainWindow(QMainWindow):
         cobidtextboxValue = cobidtextbox.text()
         self.set_cobid(cobidtextboxValue)
           
-        
         #self.main.set_bytes(textboxValue[i])
         channelLabel = QLabel("Channel        :", ChildWindow)
         channelLabel.setText("Channel         :")
@@ -665,7 +676,6 @@ class MainWindow(QMainWindow):
         dlctextbox = QLineEdit(self.__dlc, ChildWindow)
         dlctextboxValue = dlctextbox.text()
         self.set_dlc(dlctextboxValue)
-        
         
         FirstGridLayout.addWidget(cobidLabel, 0, 0)
         FirstGridLayout.addWidget(cobidtextbox, 0, 1)
@@ -714,8 +724,7 @@ class MainWindow(QMainWindow):
         MainLayout.addWidget(FirstGroupBox , 0, 0)
         MainLayout.addWidget(SecondGroupBox , 1, 0)
         MainLayout.addLayout(HBox , 2, 0)
-        
-        ChildWindow.setCentralWidget(plotframe)
+
         plotframe.setLayout(MainLayout) 
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)

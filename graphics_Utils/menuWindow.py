@@ -170,7 +170,6 @@ class MenuBar(mainWindow.MainWindow):
                  
             elif cs == True and wwo == True:
                 flag = QTextDocument.FindBackward and QTextDocument.FindCaseSensitively and QTextDocument.FindWholeWords
-             
             self.text.find(f,flag)
  
         def handleReplace():
