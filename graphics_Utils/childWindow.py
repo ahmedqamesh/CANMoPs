@@ -67,21 +67,9 @@ class ChildWindow(QWidget):
         
         indexLabel = QLabel("Period[s]", self)
         indexLabel.setText("Period [s]")
-        
-        startLabel = QLabel("Start", self)
-        startLabel.setText("Start")
-        
-        pauseLabel = QLabel("Pause", self)
-        pauseLabel.setText("Pause")
-        
-        stopLabel = QLabel("Stop", self)
-        stopLabel.setText("Stop")
                 
         HLabelBox = QHBoxLayout()
         HLabelBox.addWidget(indexLabel)
-        HLabelBox.addWidget(startLabel)
-        HLabelBox.addWidget(pauseLabel)
-        HLabelBox.addWidget(stopLabel)
          
         trendLayout.addWidget(Fig, 0, 0)
         trendLayout.addLayout(HLabelBox, 1,0)
@@ -89,13 +77,7 @@ class ChildWindow(QWidget):
         
         self.WindowGroupBox.setLayout(trendLayout)
         logframe.setLayout(trendLayout) 
-
-    def _createStatusBar(self, childwindow):
-        status = QStatusBar()
-        status.showMessage("Ready")
-        childwindow.setStatusBar(status)
- 
-        
+  
     def clicked(self, q):
         print("is clicked")
         
