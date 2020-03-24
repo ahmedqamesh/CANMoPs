@@ -4,6 +4,7 @@ from typing import *
 import sched, time
 import sys
 import os
+from os import chdir
 from matplotlib.backends.qt_compat import QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5 import *
@@ -16,6 +17,7 @@ from logging.handlers import RotatingFileHandler
 from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
+from random import randint
 from matplotlib.figure import Figure
 from graphics_Utils import dataMonitoring , menuWindow ,logWindow, childWindow
 from analysis import analysis_utils ,controlServer
@@ -63,11 +65,11 @@ class MainWindow(QMainWindow):
         self.index_description_items = None
         self.subIndex_description_items = None
         self.__response =None
-        
         #Show a textBox
         self.textBoxWindow()
         
         self.MainWindow = QMainWindow()
+        
     
     def devices_configuration(self,dev):
         self.__appName          = dev["Application"]["device_name"] 
@@ -79,12 +81,12 @@ class MainWindow(QMainWindow):
         return  self.__appName, self.__version, self.__icon_dir, self.__nodeIds, self.__dictionary_items      
     
     def Ui_ApplicationWindow(self):
+        self.trendWindow()
         self.menu= menuWindow.MenuBar(self)
         self.menu._createMenu(self)
         self._createtoolbar(self)
         self.menu._createStatusBar(self)
         self.server = controlServer.ControlServer()
-    
         # 1. Window settings
         self.setWindowTitle(self.__appName +"_"+ self.__appVersion)
         self.setWindowIcon(QtGui.QIcon(self.__appIconDir))
@@ -156,11 +158,9 @@ class MainWindow(QMainWindow):
         self.startButton.clicked.connect(self.send_sdo_can)                 
                 
         self.GridLayout.addWidget(nodeLabel,0,0)
-        self.GridLayout.addWidget(nodeComboBox,1,0)
-        
+        self.GridLayout.addWidget(nodeComboBox,1,0)   
         self.GridLayout.addWidget(indexLabel,0,1)
         self.GridLayout.addWidget(self.mainIndexTextBox,1,1)
-        
         self.GridLayout.addWidget(subIndexLabel,0,2)
         self.GridLayout.addWidget(self.mainSubIndextextbox,1,2)       
         self.GridLayout.addWidget(self.startButton,1,3)
@@ -208,11 +208,11 @@ class MainWindow(QMainWindow):
         self.canSettingsChildWindow(MainWindow)
         MainWindow.show()
 
-    def trendWindow(self,data = None, trending =None):
-        self.trendWindow = QMainWindow()
+    def trendWindow(self):
+        self.trend = QMainWindow()
         self.ui = childWindow.ChildWindow()
-        self.ui.trendChildWindow(self.trendWindow, trending)
-        self.trendWindow.show()
+        self.ui.trendChildWindow(self.trend)
+        self.trend.show()
             
     def deviceWindow(self):
         self.deviceWindow = QMainWindow()
@@ -248,7 +248,6 @@ class MainWindow(QMainWindow):
         if interface !="Kvaser":
             ipAddress = self.get_ipAddress()
             self.server.set_ipAddress(ipAddress)
-            
         self.server.set_bitrate(bitrate)
         self.server.set_interface(interface)
         self.server.set_canController(interface = interface)
@@ -263,24 +262,18 @@ class MainWindow(QMainWindow):
         nodeId = self.__nodeIds[0]
         try:   
             self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
-            self.set_data_point( self.__response)
+            self.set_data_point(self.__response)
             self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
         except Exception:
             self.error_message(text = "Make sure that the CAN interface is connected")
     
+    def send_sdo_data(self):
+        data = randint(0,100)
+        self.set_data_point(data)
+        
     def error_message(self, text=False):
         QMessageBox.about(self,"Error Message",text)
-        
-    def trend_sdo_can(self):
-        sleep = 1
-        t = 0
-        trend_time = 10
-        self.trendWindow(trending =trend_time)
-        #while t < trend_time:
-        #    time.sleep(sleep)
-        #    t = t+sleep
-        #    self.send_sdo_can()
-            
+     
     def print_sdo_can(self, nodeId =None , index = None, subIndex =None, response_from_node ="response_from_node"):
         # printing the read message with cobid = SDO_RX + nodeId
         MAX_DATABYTES =8
@@ -388,7 +381,7 @@ class MainWindow(QMainWindow):
     
     def get_data_point(self):
         return self.__response
-            
+        
     def get_index_items(self):
         return self.__index_items
                
@@ -730,8 +723,8 @@ class MainWindow(QMainWindow):
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
                       
     def deviceChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("OutputWindow")
-        ChildWindow.setWindowTitle("Output Window")
+        ChildWindow.setObjectName("DeviceWindow")
+        ChildWindow.setWindowTitle("Device Window")
         ChildWindow.adjustSize()
         logframe = QFrame(ChildWindow)
         logframe.setLineWidth(0.6)
@@ -771,10 +764,9 @@ class MainWindow(QMainWindow):
         trendingButton = QPushButton("")
         trendingButton.setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
         trendingButton.setStatusTip('Data Trending') # show when move mouse to the icon
-        trendingButton.clicked.connect(self.trend_sdo_can)
+        trendingButton.clicked.connect(self.trendWindow)
         #trendingButton.clicked.connect(self.clicked)
-        
-        
+
         HLayout =QHBoxLayout()
         HLayout.addWidget(startButton)
         HLayout.addWidget(trendingButton)
