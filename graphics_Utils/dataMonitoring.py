@@ -16,11 +16,8 @@ from pyqtgraph import *
 import time
 from IPython import display
 import matplotlib as mpl
-from matplotlib.figure import Figure
 from analysis import analysis_utils
 from graphics_Utils import mainWindow
-
-#plt.style.use('ggplot')
 class LiveMonitoringData(QtWidgets.QMainWindow):
     
     def __init__(self, parent=None):
@@ -86,10 +83,8 @@ class LiveMonitoringDistribution(FigureCanvas):
         FigureCanvas.setSizePolicy(self,QSizePolicy.Expanding,QSizePolicy.Expanding),FigureCanvas.updateGeometry(self)
         self.data = list(range(100))  # 100 time points
         self.axes.set_xlabel(r'CAN Data', size = 10)
-        self.axes.set_ylabel(r'Counts', size = 10)
-        
+        self.axes.set_ylabel(r'Counts', size = 10) 
         self.axes.grid(True)
-
         plt.tight_layout()
     
     def initiate_timer(self,period=None):    
@@ -104,7 +99,7 @@ class LiveMonitoringDistribution(FigureCanvas):
         self.main.send_sdo_data() # to be replaced with send_sdo_can
         y = self.main.get_data_point()
         self.data.append(y)
-        print(len(self.data))
+        #print(len(self.data))
         hist_data, edges = np.histogram(self.data, bins=np.arange(0, 100, 1))  #
         x, y = edges[:-1], hist_data
         self.axes.fill_between(x, y, color='#F5A9BC', label="Data")

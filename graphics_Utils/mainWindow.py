@@ -29,14 +29,12 @@ import verboselogs
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
-    
     def __init__(self,parent=None, 
                  device_config = ["PSPP_cfg.yml"],
                  main_config = ["main_cfg.yml"]):
         super(MainWindow, self).__init__(parent)
         self.__device_config = device_config            
         self.logger = logging.getLogger(__name__)
-        
         self.child = childWindow.ChildWindow() 
         #Start with default settings
         config_dir = "config/"
@@ -70,7 +68,6 @@ class MainWindow(QMainWindow):
         
         self.MainWindow = QMainWindow()
         
-    
     def devices_configuration(self,dev):
         self.__appName          = dev["Application"]["device_name"] 
         self.__version          = dev['Application']['device_version']
@@ -81,7 +78,7 @@ class MainWindow(QMainWindow):
         return  self.__appName, self.__version, self.__icon_dir, self.__nodeIds, self.__dictionary_items      
     
     def Ui_ApplicationWindow(self):
-        self.trendWindow()
+        #self.trendWindow()
         self.menu= menuWindow.MenuBar(self)
         self.menu._createMenu(self)
         self._createtoolbar(self)

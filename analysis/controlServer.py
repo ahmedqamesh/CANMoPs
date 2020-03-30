@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 from typing import *
 import time
@@ -27,7 +26,7 @@ from canlib.canlib.exceptions import CanGeneralError
 from canlib.canlib import ChannelData
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__))
-#log = logger.setup_derived_logger('Control Server')
+
 class ControlServer(object):
     def __init__(self, parent=None, 
                  config=None, interface= None,

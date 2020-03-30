@@ -3,7 +3,6 @@ qtawesome
 coloredlogs
 verboselogs
 aenum
-opcua
 analib
 
 ###### A particular file ######

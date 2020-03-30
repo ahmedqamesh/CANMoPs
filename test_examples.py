@@ -28,6 +28,5 @@ from graphics_Utils import dataMonitoring
 
 app = QtWidgets.QApplication(sys.argv)
 w = dataMonitoring.LiveMonitoringDistribution()
-
 w.show()
 sys.exit(app.exec_())
