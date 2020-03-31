@@ -96,14 +96,19 @@ class MainWindow(QMainWindow):
         mainFrame.setLineWidth(0.6)
         self.setCentralWidget(mainFrame)
     
+        line = QFrame()
+        line.setGeometry(QRect(320, 150, 118, 3))
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        
         # SetLayout
         self.mainLayout = QGridLayout()
         self.mainLayout.addWidget(self.interfaceComboBox,0,0)
         self.mainLayout.addWidget(self.connectButton,0,1)
-        
         self.mainLayout.addLayout(self.GridLayout,1,0)
         self.mainLayout.addWidget(self.textBox,2,0)
-        self.mainLayout.addLayout(self.HLayout,3,0)
+        self.mainLayout.addWidget(line,3,0)
+        self.mainLayout.addLayout(self.HLayout,4,0)
         #mainLayout.addWidget(self.progressBar,2,0)
         mainFrame.setLayout(self.mainLayout)
         # 3. Show
@@ -120,7 +125,7 @@ class MainWindow(QMainWindow):
         self.interfaceComboBox = QComboBox(self)
         for item in __interfaceItems[1:]: self.interfaceComboBox.addItem(item)
         self.interfaceComboBox.activated[str].connect(self.set_interface)
-        
+        self.interfaceComboBox.setStatusTip('Select the connected interface')
         self.connectButton = QPushButton("")
         self.connectButton.setIcon(QIcon('graphics_Utils/icons/icon_disconnect.jpg'))
         
@@ -128,6 +133,7 @@ class MainWindow(QMainWindow):
         icon.addPixmap(QPixmap('graphics_Utils/icons/icon_connect.jpg'), QIcon.Normal,  QIcon.On)
         icon.addPixmap(QPixmap('graphics_Utils/icons/icon_disconnect.jpg'),  QIcon.Normal, QIcon.Off)
         self.connectButton.setIcon(icon)
+        self.connectButton.setStatusTip('Connect the interface')
         self.connectButton.setCheckable(True)
         self.connectButton.clicked.connect(self.set_connect)
 
@@ -138,7 +144,7 @@ class MainWindow(QMainWindow):
         nodeComboBox = QComboBox(self)
         for item in nodeitems: nodeComboBox.addItem(item)
         nodeComboBox.activated[str].connect(self.set_nodeId)
-
+        nodeComboBox.setStatusTip('NodeIds as defined in the main_cfg.yml file')
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
         self.mainIndexTextBox = QLineEdit("0x1000", self)
@@ -151,9 +157,10 @@ class MainWindow(QMainWindow):
                 
         self.startButton = QPushButton("")
         self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
+        self.startButton.setStatusTip('Send CAN message')
         self.startButton.clicked.connect(self.applyLineEditChanges) 
         self.startButton.clicked.connect(self.send_sdo_can)                 
-                
+                   
         self.GridLayout.addWidget(nodeLabel,0,0)
         self.GridLayout.addWidget(nodeComboBox,1,0)   
         self.GridLayout.addWidget(indexLabel,0,1)
@@ -171,6 +178,7 @@ class MainWindow(QMainWindow):
         deviceLabel = QLabel("Configure Device", self)
         deviceLabel.setText("Configure Device")
         self.deviceButton= QPushButton("")
+        self.deviceButton.setStatusTip('Choose the configuration yaml file')
         self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
         self.deviceButton.clicked.connect(self.update_device_menu)
         self.HLayout.addWidget(deviceLabel)

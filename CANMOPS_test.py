@@ -47,5 +47,5 @@ def test():
     #analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-    server = controlServer.ControlServer(GUI=None, interface = "Kvaser", Set_CAN =False)
+    server = controlServer.ControlServer(GUI=True, interface = "Kvaser", Set_CAN =False)
     test()

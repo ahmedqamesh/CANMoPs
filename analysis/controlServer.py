@@ -30,7 +30,7 @@ rootdir = os.path.dirname(os.path.abspath(__file__))
 class ControlServer(object):
     def __init__(self, parent=None, 
                  config=None, interface= None,
-                 bitrate =None, logdir = None,
+                 bitrate =None,
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
                  channel =None,ipAddress =None,
@@ -43,12 +43,6 @@ class ControlServer(object):
         """:obj:`~logging.Logger`: Main logger for this class"""
         verboselogs.install()
         self.logger = logging.getLogger(__name__)
-        #log directory
-        if logdir is None:
-            logdir = os.path.join(rootdir, 'log')
-            if not os.path.exists(logdir):
-                    os.makedirs(logdir)
-        ts = os.path.join(logdir, time.strftime('%Y-%m-%d_%H-%M-%S_controller_Server.'))
         cl.install(fmt=logformat, level=console_loglevel, isatty=True,milliseconds=True)
         
         # Read configurations from a file
@@ -67,11 +61,10 @@ class ControlServer(object):
         self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
         self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
-
+        self.logger.notice('... Loading all the configurations!')
                 
          # Initialize default arguments
         if interface is None:
-            self.logger.success('Setting the interface to %s' %interface)
             interface = self.__interface     
         elif interface not in ['Kvaser', 'AnaGate']:
             raise ValueError(f'Possible CAN interfaces are "Kvaser" or '
@@ -95,7 +88,6 @@ class ControlServer(object):
         if ipAddress is None:
             ipAddress = self.__ipAddress
 
-        
         """Internal attribute for the |CAN| channel"""
         if Set_CAN:
             self.set_canController(interface = interface)
@@ -104,11 +96,10 @@ class ControlServer(object):
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
-        
+        self.logger.success('... Done!')
         if GUI is not None:
             self.start_graphicalInterface()
-        self.logger.success('... Done!')
-    
+        
     def __str__(self):
         if self.__interface == 'Kvaser':
             num_channels = canlib.getNumberOfChannels()
@@ -121,10 +112,10 @@ class ControlServer(object):
         else:
             return f'{self.__ch}'
 
-  
     def start_graphicalInterface(self):
         self.logger.notice('Opening a graphical user Interface')
         qapp = QtWidgets.QApplication(sys.argv)
+        from graphics_Utils import mainWindow
         app = mainWindow.MainWindow()
         app.Ui_ApplicationWindow()
         qapp.exec_()
