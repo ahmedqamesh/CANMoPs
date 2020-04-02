@@ -729,7 +729,7 @@ class MainWindow(QMainWindow):
                       
     def deviceChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("DeviceWindow")
-        ChildWindow.setWindowTitle("Device Window")
+        ChildWindow.setWindowTitle("Device Window [ "+self.__appName +"]")
         ChildWindow.adjustSize()
         logframe = QFrame(ChildWindow)
         logframe.setLineWidth(0.6)
