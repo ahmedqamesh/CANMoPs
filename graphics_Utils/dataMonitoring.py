@@ -105,5 +105,41 @@ class LiveMonitoringDistribution(FigureCanvas):
         self.axes.fill_between(x, y, color='#F5A9BC', label="Data")
         self.draw()
         
+ 
+class LiveMonitoringADC(FigureCanvas):
+    
+    """A canvas that updates itself every second with a new plot."""
+    def __init__(self, parent=None,period=2000):
+        self.main = mainWindow.MainWindow()
+        self.initiate_timer(period=period)
+        
+    
+    def initiate_timer(self,period=None):    
+        self.timer = QtCore.QTimer()
+        
+        self.timer.timeout.connect(self.update_channel_data)
+        self.timer.start(period)
+    
+    def stop_timer(self):
+        self.timer.stop() 
+                
+    def update_channel_data(self):
+        print("dsfdsfdsfds")
+        n_channels = np.arange(3,34)
+        channels_values = np.random.randint(1,101,len(n_channels))
+        print(channels_values)
+        for i in np.arange(len(n_channel)):
+            self.ChannelBox[i].setText(str(channels_values[i]))        
+        return channels_values
+    
+#         self.main.send_sdo_data() # to be replaced with send_sdo_can
+#         y = self.main.get_data_point()
+#         self.data.append(y)
+#         #print(len(self.data))
+#         hist_data, edges = np.histogram(self.data, bins=np.arange(0, 100, 1))  #
+#         x, y = edges[:-1], hist_data
+#         self.axes.fill_between(x, y, color='#F5A9BC', label="Data")
+#         self.draw()
+        
 if __name__ == '__main__':
     pass

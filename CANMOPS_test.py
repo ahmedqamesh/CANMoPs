@@ -28,7 +28,7 @@ def test():
     print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
       
     #write sdo message
-    #print('Writing example CAN Expedited read message ...')
+    print('Writing example CAN Expedited read message ...')
       
     #Example (1): get node Id
     VendorId = server.sdoRead(NodeIds[0], 0x1000,0,1500)
@@ -47,5 +47,5 @@ def test():
     #analib.wrapper.restart(ch.ipAddress)
 
 if __name__=='__main__':
-    server = controlServer.ControlServer(GUI=True, interface = "Kvaser", Set_CAN =False)
+    server = controlServer.ControlServer(GUI=True, interface = "AnaGate", Set_CAN =False)
     test()

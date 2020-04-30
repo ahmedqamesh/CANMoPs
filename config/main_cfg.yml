@@ -4,7 +4,7 @@ Application:
     app_icon_dir         :   "graphics_Utils/icons/icon_mops.png"   
 
 CAN_settings:
-        nodeIds: [8]
+        nodeIds: [1]
 
 default_values:
     interface_items : ["----","AnaGate" , "Kvaser","Others"]

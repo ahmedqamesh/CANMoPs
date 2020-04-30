@@ -2,7 +2,7 @@ Application:
     device_name             :   'MoPS'
     device_version          :   "v1.0"
     icon_dir                :   "graphics_Utils/icons/icon_mops.png"
-    nodeIds                 :   [8]
+    nodeIds                 :   [1]
     index_items             :   {
                                 "------" :  {"description_items" :"<html><b>-----</b></html>",
                                              "subindex_items"    :{     "-----":"<html><b>-----</b></html>"}} 

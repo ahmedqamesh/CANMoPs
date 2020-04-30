@@ -188,7 +188,7 @@ class MainWindow(QMainWindow):
         conf = self.child.open()
         #self.deviceButton = None
         self.__devices.append(conf["Application"]["device_name"])
-        #self.deviceButton.deleteLater()
+        self.deviceButton.deleteLater()
         self.HLayout.removeWidget(self.deviceButton)
         self.deviceButton= QPushButton("")
         appName, version, icon_dir, nodeIds, dictionary_items = self.devices_configuration(conf)
@@ -203,6 +203,11 @@ class MainWindow(QMainWindow):
         #self.mainLayout.addLayout(self.HLayout,3,0)
       
     # Functions to run
+    def showAdcChannelWindow(self):
+        self.MessageWindow = QMainWindow()
+        self.adcChannelChildWindow(self.MessageWindow)
+        self.MessageWindow.show()
+        
     def canMessageWindow(self):
         self.MessageWindow = QMainWindow()
         self.canMessageChildWindow(self.MessageWindow)
@@ -473,6 +478,15 @@ class MainWindow(QMainWindow):
             description_text = self.index_description_items + "<br>" + self.subindex_description_items
             self.indexTextBox.setText(description_text)    
 
+    def get_adc_channels(self):
+        print("dsfdsfdsfds")
+        n_channels = np.arange(3,34)
+        channels_values = np.random.randint(1,101,len(n_channels))
+        print(channels_values)
+        for i in np.arange(len(n_channel)):
+            self.ChannelBox[i].setText(str(channels_values[i]))        
+        return channels_values
+        
     def _createStatusBar(self, childwindow):
         status = QStatusBar()
         status.showMessage("Ready")
@@ -641,6 +655,56 @@ class MainWindow(QMainWindow):
         SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
         self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
 
+
+    def adcChannelChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("ADCChannels")
+        ChildWindow.setWindowTitle("ADC Channels")
+        ChildWindow.resize(310, 600)  # w*h
+        MainLayout = QGridLayout()
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(plotframe)
+        SecondGroupBox = QGroupBox("ADC channels")
+        #self.get_adc_channels
+            
+        SecondGridLayout = QGridLayout()
+        n_channel = np.arange(3,35)
+        LabelChannel = [n_channel[i] for i in np.arange(len(n_channel))]
+        self.ChannelBox = [n_channel[i] for i in np.arange(len(n_channel))]
+        
+        for i in np.arange(len(n_channel)):
+            LabelChannel[i] = QLabel("Channel", ChildWindow)
+            LabelChannel[i].setText("Ch"+str(n_channel[i])+":")
+            self.ChannelBox[i] = QLineEdit("", ChildWindow)
+            if i < 16:
+                SecondGridLayout.addWidget(LabelChannel[i], i, 0)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i, 1)
+            else:
+                SecondGridLayout.addWidget(LabelChannel[i], i-16, 4)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i -16 , 5)
+        SecondGroupBox.setLayout(SecondGridLayout) 
+        
+        HBox = QHBoxLayout()
+        send_button = QPushButton("Send")
+        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+        send_button.clicked.connect(self.send_can)
+        
+        close_button = QPushButton("close")
+        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
+        close_button.clicked.connect(ChildWindow.close)
+
+        HBox.addWidget(send_button)
+        HBox.addWidget(close_button)
+        MainLayout.addWidget(SecondGroupBox , 0, 0)
+        MainLayout.addLayout(HBox , 1, 0)
+
+        plotframe.setLayout(MainLayout) 
+        self._createStatusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
+
+                
+
     def canMessageChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("CANMessage")
         ChildWindow.setWindowTitle("CAN Message")
@@ -751,10 +815,16 @@ class MainWindow(QMainWindow):
         newfont = QFont("Times", 12, QtGui.QFont.Bold)
         device_title.setFont(newfont)
         device_title.setText("        " + self.get_appName())
-        
+
+        adcButton = QPushButton("ADC channels")
+        adcButton.setIcon(QIcon('graphics_Utils/icons/icon_reset.png'))
+        adcButton.setStatusTip('Show ADC channels') # show when move mouse to the icon
+        adcButton.clicked.connect(self.showAdcChannelWindow)
+                
         firstVLayout.addWidget(nodeComboBox)
         firstVLayout.addWidget(icon)
         firstVLayout.addWidget(device_title)
+        firstVLayout.addWidget(adcButton)
 
         VLayout = QVBoxLayout()
         self.indexTextBox = QTextEdit("", self)
@@ -771,7 +841,6 @@ class MainWindow(QMainWindow):
         trendingButton.setStatusTip('Data Trending') # show when move mouse to the icon
         trendingButton.clicked.connect(self.trendWindow)
         #trendingButton.clicked.connect(self.clicked)
-
         HLayout =QHBoxLayout()
         HLayout.addWidget(startButton)
         HLayout.addWidget(trendingButton)
@@ -807,6 +876,8 @@ class MainWindow(QMainWindow):
         self.WindowGroupBox.setLayout(self.GridLayout)
         logframe.setLayout(self.GridLayout)
 
+
+        
     '''
     Create toolbar
     '''
