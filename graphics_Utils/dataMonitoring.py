@@ -3,8 +3,10 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.animation as animation
 from typing import *
 from PyQt5 import *
+from PyQt5 import *
+from PyQt5.QtCore    import *
+from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSlot
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import random
@@ -18,6 +20,81 @@ from IPython import display
 import matplotlib as mpl
 from analysis import analysis_utils
 from graphics_Utils import mainWindow
+
+class ADCMonitoringData(QMainWindow):
+    def __init__(self, parent=None):
+        super(ADCMonitoringData, self).__init__(parent)
+        self.main = mainWindow.MainWindow()
+        self.initiate_timer()
+        self.setObjectName("ADCChannels")
+        self.setWindowTitle("ADC Channels")
+        self.resize(310, 600)  # w*h
+        MainLayout = QGridLayout()
+        # Define a frame for that group
+        plotframe = QFrame(self)
+        plotframe.setLineWidth(0.6)
+        self.setCentralWidget(plotframe)
+
+        # Define a frame for that group
+        plotframe = QFrame(self)
+        plotframe.setLineWidth(0.6)
+        self.setCentralWidget(plotframe)
+        SecondGroupBox = QGroupBox("ADC channels")      
+        SecondGridLayout = QGridLayout()
+        n_channel = np.arange(3,35)
+        LabelChannel = [n_channel[i] for i in np.arange(len(n_channel))]
+        self.ChannelBox = [n_channel[i] for i in np.arange(len(n_channel))]
+        adc_channels_reg = self.main.get_adc_channels_reg()
+        for i in np.arange(len(n_channel)):
+            LabelChannel[i] = QLabel("Channel", self)
+            LabelChannel[i].setText("Ch"+str(n_channel[i])+":")
+            self.ChannelBox[i] = QLineEdit("", self)
+            self.ChannelBox[i].setStyleSheet("background-color: white; border: 1px inset black;")
+            self.ChannelBox[i].setReadOnly(True)
+            icon = QLabel(self)
+            print(adc_channels_reg.items()[2:])
+            print(adc_channels_reg[str(i+1)])
+            icon_dir = 'graphics_Utils/icons/icon_thermometer.png'
+            pixmap = QPixmap(icon_dir)
+            icon.setPixmap(pixmap.scaled(20, 30))
+            if i < 16:
+                SecondGridLayout.addWidget(icon, i, 0)
+                SecondGridLayout.addWidget(LabelChannel[i], i, 1)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i, 2)
+            else:
+                SecondGridLayout.addWidget(icon, i-16, 4)
+                SecondGridLayout.addWidget(LabelChannel[i], i-16, 5)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i -16 , 6)
+        SecondGroupBox.setLayout(SecondGridLayout) 
+        
+        HBox = QHBoxLayout()
+        send_button = QPushButton("Send")
+        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+        #send_button.clicked.connect(self.send_can)
+        
+        close_button = QPushButton("close")
+        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
+        close_button.clicked.connect(self.close)
+
+        HBox.addWidget(send_button)
+        HBox.addWidget(close_button)
+        MainLayout.addWidget(SecondGroupBox , 1, 0)
+        MainLayout.addLayout(HBox , 2, 0)
+        plotframe.setLayout(MainLayout) 
+        QtCore.QMetaObject.connectSlotsByName(self)
+        self.show()
+        
+    def initiate_timer(self,period=500):
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.update_adc_channels)
+        self.timer.start(period)
+           
+    def update_adc_channels(self):
+        n_channels = np.arange(3,34)
+        self._channels_values = np.random.randint(1,101,len(n_channels))
+        for i in np.arange(len(self._channels_values)):
+            self.ChannelBox[i].setText(str(self._channels_values[i]))
+        
 class LiveMonitoringData(QtWidgets.QMainWindow):
     
     def __init__(self, parent=None):
@@ -104,42 +181,6 @@ class LiveMonitoringDistribution(FigureCanvas):
         x, y = edges[:-1], hist_data
         self.axes.fill_between(x, y, color='#F5A9BC', label="Data")
         self.draw()
-        
- 
-class LiveMonitoringADC(FigureCanvas):
-    
-    """A canvas that updates itself every second with a new plot."""
-    def __init__(self, parent=None,period=2000):
-        self.main = mainWindow.MainWindow()
-        self.initiate_timer(period=period)
-        
-    
-    def initiate_timer(self,period=None):    
-        self.timer = QtCore.QTimer()
-        
-        self.timer.timeout.connect(self.update_channel_data)
-        self.timer.start(period)
-    
-    def stop_timer(self):
-        self.timer.stop() 
-                
-    def update_channel_data(self):
-        print("dsfdsfdsfds")
-        n_channels = np.arange(3,34)
-        channels_values = np.random.randint(1,101,len(n_channels))
-        print(channels_values)
-        for i in np.arange(len(n_channel)):
-            self.ChannelBox[i].setText(str(channels_values[i]))        
-        return channels_values
-    
-#         self.main.send_sdo_data() # to be replaced with send_sdo_can
-#         y = self.main.get_data_point()
-#         self.data.append(y)
-#         #print(len(self.data))
-#         hist_data, edges = np.histogram(self.data, bins=np.arange(0, 100, 1))  #
-#         x, y = edges[:-1], hist_data
-#         self.axes.fill_between(x, y, color='#F5A9BC', label="Data")
-#         self.draw()
         
 if __name__ == '__main__':
     pass

@@ -1,25 +1,38 @@
-from PyQt5.QtWidgets import *
 import sys
-
-class Window(QWidget):
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QTimer, QTime, Qt
+ 
+class AppDemo(QWidget):
     def __init__(self):
-        QWidget.__init__(self)
-        layout = QGridLayout()
+        super().__init__()
+        self.resize(250, 150)
+        layout = QVBoxLayout()
+        fnt = QFont('Open Sans', 120, QFont.Bold)
+ 
+        self.lbl = QLabel()
+        self.lbl.setAlignment(Qt.AlignCenter)
+        self.lbl.setFont(fnt)
+        layout.addWidget(self.lbl)
+ 
         self.setLayout(layout)
-        self.listwidget = QListWidget()
-        self.listwidget.insertItem(0, "Red")
-        self.listwidget.insertItem(1, "Orange")
-        self.listwidget.insertItem(2, "Blue")
-        self.listwidget.insertItem(3, "White")
-        self.listwidget.insertItem(4, "Green")
-        self.listwidget.clicked.connect(self.clicked)
-        layout.addWidget(self.listwidget)
-
-    def clicked(self, qmodelindex):
-        item = self.listwidget.currentItem()
-        print(item.text())
-
+ 
+        timer = QTimer(self)
+        timer.timeout.connect(self.showTime)
+        timer.start(1000) # update every second
+ 
+        self.showTime()
+ 
+    def showTime(self):
+        currentTime = QTime.currentTime()
+ 
+        displayTxt = currentTime.toString('hh:mm:ss')
+        print(displayTxt)
+ 
+        self.lbl.setText(displayTxt)
+ 
+ 
 app = QApplication(sys.argv)
-screen = Window()
-screen.show()
-sys.exit(app.exec_())
+demo = AppDemo()
+demo.show()
+app.exit(app.exec_())

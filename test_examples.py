@@ -27,9 +27,9 @@ import os
 from graphics_Utils import dataMonitoring
 
 app = QtWidgets.QApplication(sys.argv)
-#w = dataMonitoring.LiveMonitoringDistribution()
 MessageWindow = QMainWindow()
-mainWindow.MainWindow().adcChannelChildWindow(MessageWindow)
-MessageWindow.show()
-#w.show()
-sys.exit(app.exec_())
+#mainWindow.MainWindow().adcChannelChildWindow(MessageWindow)
+dataMonitoring.ADCMonitoringData(MessageWindow)
+#MessageWindow.show()
+app.exit(app.exec_())
+

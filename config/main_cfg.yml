@@ -6,6 +6,8 @@ Application:
 CAN_settings:
         nodeIds: [1]
 
+Devices:    ["MOPS"] 
+
 default_values:
     interface_items : ["----","AnaGate" , "Kvaser","Others"]
     index_items     : ["0x1000"]
@@ -29,7 +31,6 @@ CAN_Interface:
         timeout     :   500
         channel     :   0
 
-Devices:    ["None"] 
     
 Other:
     user    :   "Ahmed Qamesh"

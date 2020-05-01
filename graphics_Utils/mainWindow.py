@@ -37,10 +37,10 @@ class MainWindow(QMainWindow):
         self.logger = logging.getLogger(__name__)
         self.child = childWindow.ChildWindow() 
         #Start with default settings
-        config_dir = "config/"
+        self.config_dir = "config/"
         
         # Read configurations from a file    
-        conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-14])
+        conf = analysis_utils.open_yaml_file(file =self.config_dir + "main_cfg.yml",directory =rootdir[:-14])
         self.__appName          =   conf["Application"]["app_name"] 
         self.__appVersion       =   conf['Application']['app_version']
         self.__appIconDir       =   conf["Application"]["app_icon_dir"]        
@@ -63,6 +63,10 @@ class MainWindow(QMainWindow):
         self.index_description_items = None
         self.subIndex_description_items = None
         self.__response =None
+        self.ChannelBox = [0 for i in np.arange(32)]
+        for i in np.arange(32):
+            self.ChannelBox[i] = QLineEdit("")
+            
         #Show a textBox
         self.textBoxWindow()
         
@@ -75,7 +79,8 @@ class MainWindow(QMainWindow):
         self.__nodeIds          = dev["Application"]["nodeIds"]
         self.__dictionary_items = dev["Application"]["index_items"]
         self.__index_items = list(self.__dictionary_items.keys())
-        return  self.__appName, self.__version, self.__icon_dir, self.__nodeIds, self.__dictionary_items      
+        self.__adc_channels_reg   = dev["Application"]["adc_channels"]
+        return  self.__appName, self.__version, self.__icon_dir, self.__nodeIds, self.__dictionary_items, self.__adc_channels_reg
     
     def Ui_ApplicationWindow(self):
         #self.trendWindow()
@@ -176,22 +181,30 @@ class MainWindow(QMainWindow):
     def configureDeviceBox(self,conf):
         self.HLayout =QHBoxLayout()
         deviceLabel = QLabel("Configure Device", self)
-        deviceLabel.setText("Configure Device")
         self.deviceButton= QPushButton("")
         self.deviceButton.setStatusTip('Choose the configuration yaml file')
-        self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
-        self.deviceButton.clicked.connect(self.update_device_menu)
+        if self.__devices is None:
+            deviceLabel.setText("Configure Device")
+            self.deviceButton.setIcon(QIcon('graphics_Utils/icons/icon_question.png'))
+            self.deviceButton.clicked.connect(self.update_device_menu)
+        else:
+            deviceLabel.setText("Configured Device ["+self.__devices[0]+"]")
+            self.update_device_menu()
         self.HLayout.addWidget(deviceLabel)
         self.HLayout.addWidget(self.deviceButton)
 
     def update_device_menu(self):
-        conf = self.child.open()
+        if self.__devices is None:
+            conf = self.child.open()
+        else:
+            conf = analysis_utils.open_yaml_file(file =self.config_dir + self.__devices[0]+"_cfg.yml",directory =rootdir[:-14])
         #self.deviceButton = None
         self.__devices.append(conf["Application"]["device_name"])
         self.deviceButton.deleteLater()
         self.HLayout.removeWidget(self.deviceButton)
         self.deviceButton= QPushButton("")
-        appName, version, icon_dir, nodeIds, dictionary_items = self.devices_configuration(conf)
+        appName, version, icon_dir, nodeIds, dictionary_items, adc_channels_reg = self.devices_configuration(conf)
+        self.set_adc_channels_reg(adc_channels_reg)
         self.set_appName(appName)
         self.set_version(version)
         self.set_icon_dir(icon_dir)
@@ -200,13 +213,11 @@ class MainWindow(QMainWindow):
         self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
         self.deviceButton.clicked.connect(self.deviceWindow)
         self.HLayout.addWidget(self.deviceButton)
-        #self.mainLayout.addLayout(self.HLayout,3,0)
       
     # Functions to run
     def showAdcChannelWindow(self):
-        self.MessageWindow = QMainWindow()
-        self.adcChannelChildWindow(self.MessageWindow)
-        self.MessageWindow.show()
+        self.adcWindow = QMainWindow()
+        self.adc_live = dataMonitoring.ADCMonitoringData(self.adcWindow)
         
     def canMessageWindow(self):
         self.MessageWindow = QMainWindow()
@@ -343,7 +354,10 @@ class MainWindow(QMainWindow):
 
     def set_appName(self,x):
         self.__appName = x
-        
+    
+    def set_adc_channels_reg(self,x):
+        self.__adc_channels_reg = x
+
     def set_version(self,x):
         self.__version = x
         
@@ -410,6 +424,9 @@ class MainWindow(QMainWindow):
     def get_appName(self):
         return self.__appName
 
+    def get_adc_channels_reg(self):
+        return self.__adc_channels_reg
+        
     def get_DllVersion(self):
         ret = analib.wrapper.dllInfo()
         return ret
@@ -477,15 +494,6 @@ class MainWindow(QMainWindow):
             self.subindex_description_items = analysis_utils.get_subindex_description_yaml(dictionary=dictionary, index=index, subindex=subindex)
             description_text = self.index_description_items + "<br>" + self.subindex_description_items
             self.indexTextBox.setText(description_text)    
-
-    def get_adc_channels(self):
-        print("dsfdsfdsfds")
-        n_channels = np.arange(3,34)
-        channels_values = np.random.randint(1,101,len(n_channels))
-        print(channels_values)
-        for i in np.arange(len(n_channel)):
-            self.ChannelBox[i].setText(str(channels_values[i]))        
-        return channels_values
         
     def _createStatusBar(self, childwindow):
         status = QStatusBar()
@@ -654,57 +662,7 @@ class MainWindow(QMainWindow):
         SubSecondGridLayout.addWidget(thirdLabel, 2, 0)
         SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
         self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
-
-
-    def adcChannelChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("ADCChannels")
-        ChildWindow.setWindowTitle("ADC Channels")
-        ChildWindow.resize(310, 600)  # w*h
-        MainLayout = QGridLayout()
-        # Define a frame for that group
-        plotframe = QFrame(ChildWindow)
-        plotframe.setLineWidth(0.6)
-        ChildWindow.setCentralWidget(plotframe)
-        SecondGroupBox = QGroupBox("ADC channels")
-        #self.get_adc_channels
-            
-        SecondGridLayout = QGridLayout()
-        n_channel = np.arange(3,35)
-        LabelChannel = [n_channel[i] for i in np.arange(len(n_channel))]
-        self.ChannelBox = [n_channel[i] for i in np.arange(len(n_channel))]
         
-        for i in np.arange(len(n_channel)):
-            LabelChannel[i] = QLabel("Channel", ChildWindow)
-            LabelChannel[i].setText("Ch"+str(n_channel[i])+":")
-            self.ChannelBox[i] = QLineEdit("", ChildWindow)
-            if i < 16:
-                SecondGridLayout.addWidget(LabelChannel[i], i, 0)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i, 1)
-            else:
-                SecondGridLayout.addWidget(LabelChannel[i], i-16, 4)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i -16 , 5)
-        SecondGroupBox.setLayout(SecondGridLayout) 
-        
-        HBox = QHBoxLayout()
-        send_button = QPushButton("Send")
-        send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
-        send_button.clicked.connect(self.send_can)
-        
-        close_button = QPushButton("close")
-        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
-        close_button.clicked.connect(ChildWindow.close)
-
-        HBox.addWidget(send_button)
-        HBox.addWidget(close_button)
-        MainLayout.addWidget(SecondGroupBox , 0, 0)
-        MainLayout.addLayout(HBox , 1, 0)
-
-        plotframe.setLayout(MainLayout) 
-        self._createStatusBar(ChildWindow)
-        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
-
-                
-
     def canMessageChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("CANMessage")
         ChildWindow.setWindowTitle("CAN Message")
