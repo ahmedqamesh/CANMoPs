@@ -26,10 +26,9 @@ import sys  # We need sys so that we can pass argv to QApplication
 import os
 from graphics_Utils import dataMonitoring
 
-app = QtWidgets.QApplication(sys.argv)
-MessageWindow = QMainWindow()
+#app = QtWidgets.QApplication(sys.argv)
+#MessageWindow = QMainWindow()
 #mainWindow.MainWindow().adcChannelChildWindow(MessageWindow)
-dataMonitoring.ADCMonitoringData(MessageWindow)
+#dataMonitoring.ADCMonitoringData(MessageWindow)
 #MessageWindow.show()
-app.exit(app.exec_())
-
+#app.exit(app.exec_())

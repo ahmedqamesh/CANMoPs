@@ -29,6 +29,7 @@ import verboselogs
 import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
+    
     def __init__(self,parent=None, 
                  device_config = ["PSPP_cfg.yml"],
                  main_config = ["main_cfg.yml"]):
@@ -217,12 +218,14 @@ class MainWindow(QMainWindow):
     # Functions to run
     def showAdcChannelWindow(self):
         self.adcWindow = QMainWindow()
-        self.adc_live = dataMonitoring.ADCMonitoringData(self.adcWindow)
+        dataMonitoring.ADCMonitoringData(self.adcWindow)
+        #self.adcMonitoringData(self.adcWindow)
+        #self.adcWindow.show()
         
     def canMessageWindow(self):
         self.MessageWindow = QMainWindow()
         self.canMessageChildWindow(self.MessageWindow)
-        self.MessageWindow.show()
+        #self.MessageWindow.show()
 
     def canSettingsWindow(self):
         MainWindow = QMainWindow()
@@ -277,14 +280,20 @@ class MainWindow(QMainWindow):
     Define can communication messages
     '''
                
-    def send_sdo_can(self, trending =False):
+    def send_sdo_can(self, trending =False, print_sdo = True):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex(),16)
         nodeId = self.__nodeIds[0]
         try:
+            if self.server ==None: 
+                self.server =  controlServer.ControlServer()
+                interface = self.get_interface()
+                self.server.set_interface(interface)
+                self.server.set_canController(interface = interface)
             self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
             self.set_data_point(self.__response)
-            self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
+            if print_sdo == True:
+                self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
         except Exception:
             self.error_message(text = "Make sure that the CAN interface is connected")
     
@@ -748,7 +757,87 @@ class MainWindow(QMainWindow):
         plotframe.setLayout(MainLayout) 
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
-                      
+    
+    def adcMonitoringData(self, ChildWindow):
+        self.n_channels = np.arange(3,35)
+        ChildWindow.setObjectName("ADCChannels")
+        ChildWindow.setWindowTitle("ADC Channels")
+        ChildWindow.resize(350, 600)  # w*h
+        MainLayout = QGridLayout()
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(plotframe)
+        
+        SecondGroupBox = QGroupBox("ADC channels")      
+        SecondGridLayout = QGridLayout()
+        LabelChannel = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
+        self.ChannelBox = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
+        self.trendingButton = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
+        adc_channels_reg = self.get_adc_channels_reg()
+        self.index = self.__index_items[-1]
+        dictionary = self.__dictionary_items
+        self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=self.index))   
+        for i in np.arange(len(self.n_channels)):
+            LabelChannel[i] = QLabel("Channel", self)
+            LabelChannel[i].setText("Ch"+str(self.n_channels[i])+":")
+            self.ChannelBox[i] = QLineEdit("", self)
+            self.ChannelBox[i].setStyleSheet("background-color: white; border: 1px inset black;")
+            self.ChannelBox[i].setReadOnly(True)
+            LabelChannel[i].setStatusTip('ADC channel %s [index = %s & subIndex = %s]'%(str(self.n_channels[i]),self.index,self.subIndexItems[i+1])) # show when move mouse to the icon
+            icon = QLabel("",self)
+            if adc_channels_reg[str(i+3)] =="V":       
+                icon_dir = 'graphics_Utils/icons/icon_voltage.png'
+            else:
+                icon_dir = 'graphics_Utils/icons/icon_thermometer.png'
+            pixmap = QPixmap(icon_dir)
+            icon.setPixmap(pixmap.scaled(20, 20))
+            self.trendingButton[i] = QPushButton("")
+            self.trendingButton[i].setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
+            #self.trendingButton[i].setStatusTip('Data Trending') 
+            #self.trendingButton[i].clicked.connect(self.trendWindow)
+            
+            if i < 16:
+                SecondGridLayout.addWidget(icon, i, 0)
+                #SecondGridLayout.addWidget(self.trendingButton[i], i, 1)
+                SecondGridLayout.addWidget(LabelChannel[i], i, 2)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i, 3)
+            else:
+                SecondGridLayout.addWidget(icon, i-16, 4)
+                SecondGridLayout.addWidget(LabelChannel[i], i-16, 6)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i-16 , 7)
+        SecondGroupBox.setLayout(SecondGridLayout) 
+        
+        HBox = QHBoxLayout()
+        read_button = QPushButton("Read")
+        read_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
+        read_button.clicked.connect(self.update_adc_channels)
+        
+        close_button = QPushButton("close")
+        close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
+        close_button.clicked.connect(ChildWindow.close)
+        HBox.addWidget(read_button)
+        HBox.addWidget(close_button)
+        MainLayout.addWidget(SecondGroupBox , 1, 0)
+        MainLayout.addLayout(HBox , 2, 0)
+        plotframe.setLayout(MainLayout) 
+        self._createStatusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)
+    
+    def update_adc_channels(self):
+        self._channels_values = np.random.randint(1,101,len(self.n_channels))
+        while True:
+            adc_updated = []
+            for i in np.arange(len(self.n_channels)):
+                #self.set_index(self.index)
+                #self.set_subIndex(self.subIndexItems[i+1])
+                #self.send_sdo_can()
+                #self.set_data_point(self._channels_values[i])
+                adc_updated = np.append(adc_updated,self.get_data_point())
+                print(self._channels_values[i])
+                #self.ChannelBox[i].setText(str(self._channels_values[i]))
+            time.sleep(1)
+                
     def deviceChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("DeviceWindow")
         ChildWindow.setWindowTitle("Device Window [ "+self.__appName +"]")
