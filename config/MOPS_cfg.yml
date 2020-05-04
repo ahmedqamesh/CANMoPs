@@ -1,9 +1,7 @@
 Application:
     device_name             :   'MoPS'
     device_version          :   "v1.0"
-    adc_channels            : {"1":"V",
-                               "2":"V",
-                               "3":"V",
+    adc_channels            : {"3":"V",
                                "4":"V",
                                "5":"V",
                                "6":"V",
@@ -120,5 +118,5 @@ Application:
                                                                         "1C":"<html><u>subindex 1C</u>:ADCCh30</html>",
                                                                         "1D":"<html><u>subindex 1D</u>:ADCCh31</html>",                                                     
                                                                         "1E":"<html><u>subindex 1E</u>:ADCCh32</html>",
-                                                                        "20":"<html><u>subindex 20</u>:ADCCh33</html>",
-                                                                        "21":"<html><u>subindex 21</u>:ADCCh34</html>"}}}
+                                                                        "1F":"<html><u>subindex 20</u>:ADCCh33</html>",
+                                                                        "20":"<html><u>subindex 21</u>:ADCCh34</html>"}}}

@@ -18,17 +18,19 @@ from pyqtgraph import *
 import time
 from IPython import display
 import matplotlib as mpl
-from analysis import analysis_utils
-from graphics_Utils import mainWindow
+from analysis import analysis_utils,controlServer
+from graphics_Utils import mainWindow, childWindow
 
 class ADCMonitoringData(QMainWindow):
     def __init__(self, parent=None):
         super(ADCMonitoringData, self).__init__(parent)
         self.main = mainWindow.MainWindow()
+        self.child = childWindow.ChildWindow()
         self.initiate_timer()
+        self.n_channels = np.arange(3,35)
         self.setObjectName("ADCChannels")
         self.setWindowTitle("ADC Channels")
-        self.resize(310, 600)  # w*h
+        self.resize(350, 600)  # w*h
         MainLayout = QGridLayout()
         # Define a frame for that group
         plotframe = QFrame(self)
@@ -41,30 +43,55 @@ class ADCMonitoringData(QMainWindow):
         self.setCentralWidget(plotframe)
         SecondGroupBox = QGroupBox("ADC channels")      
         SecondGridLayout = QGridLayout()
-        n_channel = np.arange(3,35)
-        LabelChannel = [n_channel[i] for i in np.arange(len(n_channel))]
-        self.ChannelBox = [n_channel[i] for i in np.arange(len(n_channel))]
+        LabelChannel = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
+        self.ChannelBox = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
+        self.trendingButton = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
         adc_channels_reg = self.main.get_adc_channels_reg()
-        for i in np.arange(len(n_channel)):
+        dictionary= self.main.get_dictionary_items()
+        index = list(dictionary.keys())[-1]
+        subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=index))   
+        for i in np.arange(len(self.n_channels)):
+            self.main.set_index(index)
+            self.main.set_subIndex(subIndexItems[i+1])
+            ind = int(self.main.get_index(),16)
+            sub = int(self.main.get_subIndex(),16)
+            print(self.n_channels[i], ind, sub)
+            self.main.send_sdo_can()
+            time.delay(5)
+            data_point = self.main.get_data_point()
+            print(data_point)
             LabelChannel[i] = QLabel("Channel", self)
-            LabelChannel[i].setText("Ch"+str(n_channel[i])+":")
+            LabelChannel[i].setText("Ch"+str(self.n_channels[i])+":")
             self.ChannelBox[i] = QLineEdit("", self)
             self.ChannelBox[i].setStyleSheet("background-color: white; border: 1px inset black;")
             self.ChannelBox[i].setReadOnly(True)
+            LabelChannel[i].setStatusTip('ADC channel %s [index = %s & subIndex = %s]'%(str(self.n_channels[i]),index,subIndexItems[i+1])) # show when move mouse to the icon
             icon = QLabel(self)
-            print(adc_channels_reg.items()[2:])
-            print(adc_channels_reg[str(i+1)])
-            icon_dir = 'graphics_Utils/icons/icon_thermometer.png'
+            if adc_channels_reg[str(i+3)] =="V":       
+                icon_dir = 'graphics_Utils/icons/icon_voltage.png'
+            else:
+                icon_dir = 'graphics_Utils/icons/icon_thermometer.png'
             pixmap = QPixmap(icon_dir)
-            icon.setPixmap(pixmap.scaled(20, 30))
+            icon.setPixmap(pixmap.scaled(20, 20))
+            
+            
+            
+            
+            self.trendingButton[i] = QPushButton("")
+            self.trendingButton[i].setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
+            self.trendingButton[i].setStatusTip('Data Trending') 
+            self.trendingButton[i].clicked.connect(self.trendWindow)
+            
             if i < 16:
                 SecondGridLayout.addWidget(icon, i, 0)
-                SecondGridLayout.addWidget(LabelChannel[i], i, 1)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i, 2)
+                #SecondGridLayout.addWidget(self.trendingButton[i], i, 1)
+                SecondGridLayout.addWidget(LabelChannel[i], i, 2)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i, 3)
             else:
                 SecondGridLayout.addWidget(icon, i-16, 4)
-                SecondGridLayout.addWidget(LabelChannel[i], i-16, 5)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i -16 , 6)
+                #SecondGridLayout.addWidget(self.trendingButton[i], i-16, 5)
+                SecondGridLayout.addWidget(LabelChannel[i], i-16, 6)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i-16 , 7)
         SecondGroupBox.setLayout(SecondGridLayout) 
         
         HBox = QHBoxLayout()
@@ -76,10 +103,11 @@ class ADCMonitoringData(QMainWindow):
         close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
         close_button.clicked.connect(self.close)
 
-        HBox.addWidget(send_button)
+        #HBox.addWidget(send_button)
         HBox.addWidget(close_button)
         MainLayout.addWidget(SecondGroupBox , 1, 0)
         MainLayout.addLayout(HBox , 2, 0)
+        self._createStatusBar(self)
         plotframe.setLayout(MainLayout) 
         QtCore.QMetaObject.connectSlotsByName(self)
         self.show()
@@ -90,11 +118,46 @@ class ADCMonitoringData(QMainWindow):
         self.timer.start(period)
            
     def update_adc_channels(self):
-        n_channels = np.arange(3,34)
-        self._channels_values = np.random.randint(1,101,len(n_channels))
+        self._channels_values = np.random.randint(1,101,len(self.n_channels))
         for i in np.arange(len(self._channels_values)):
             self.ChannelBox[i].setText(str(self._channels_values[i]))
+    
+    def trendWindow(self):
+        self.trend = QMainWindow()
+        self.trendChildWindow(self.trend)
+        self.trend.show()
+    
+    def _createStatusBar(self, childwindow):
+        status = QStatusBar()
+        status.showMessage("Ready")
+        childwindow.setStatusBar(status)
+            
+    def trendChildWindow(self,childWindow):
+        childWindow.setObjectName("TrendingWindow")
+        childWindow.setWindowTitle("Trending Window")
+        childWindow.resize(900, 500)  # w*h
+        logframe = QFrame(self)
+        logframe.setLineWidth(0.6)
+        childWindow.setCentralWidget(logframe)
+        trendLayout = QHBoxLayout()
+        self.WindowGroupBox = QGroupBox("")
+        self.Fig = LiveMonitoringData()
+        self.Fig.setStyleSheet("background-color: black;"
+                                        "color: black;"
+                                        "border-width: 1.5px;"
+                                        "border-color: black;"
+                                        "margin:0.0px;"
+                                        #"border: 1px "
+                                        "solid black;")
+
+        self.distribution = LiveMonitoringDistribution()
+        trendLayout.addWidget(self.distribution)
+        trendLayout.addWidget(self.Fig)
         
+        self.WindowGroupBox.setLayout(trendLayout)
+        logframe.setLayout(trendLayout) 
+        
+
 class LiveMonitoringData(QtWidgets.QMainWindow):
     
     def __init__(self, parent=None):

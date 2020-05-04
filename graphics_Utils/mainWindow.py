@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         self.ChannelBox = [0 for i in np.arange(32)]
         for i in np.arange(32):
             self.ChannelBox[i] = QLineEdit("")
-            
+        self.server = None    
         #Show a textBox
         self.textBoxWindow()
         
@@ -281,7 +281,7 @@ class MainWindow(QMainWindow):
         index = int(self.get_index(),16)
         subIndex = int(self.get_subIndex(),16)
         nodeId = self.__nodeIds[0]
-        try:   
+        try:
             self.__response = self.server.sdoRead(nodeId, index, subIndex,3000)
             self.set_data_point(self.__response)
             self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
