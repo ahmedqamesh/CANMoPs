@@ -296,7 +296,6 @@ class MainWindow(QMainWindow):
                 self.print_sdo_can(nodeId =nodeId, index = index,subIndex = subIndex, response_from_node = self.__response )
         except Exception:
             self.error_message(text = "Make sure that the CAN interface is connected")
-    
     def send_sdo_data(self):
         data = randint(0,100)
         self.set_data_point(data)

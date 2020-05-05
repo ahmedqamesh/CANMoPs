@@ -52,25 +52,25 @@ class ADCMonitoringData(QMainWindow):
             self.ChannelBox[i].setStyleSheet("background-color: white; border: 1px inset black;")
             self.ChannelBox[i].setReadOnly(True)
             LabelChannel[i].setStatusTip('ADC channel %s [index = %s & subIndex = %s]'%(str(self.n_channels[i]),self.index,self.subIndexItems[i+1])) # show when move mouse to the icon
-            icon = QLabel(self)
+            self.icon = QLabel(self)
             if adc_channels_reg[str(i+3)] =="V":       
                 icon_dir = 'graphics_Utils/icons/icon_voltage.png'
             else:
                 icon_dir = 'graphics_Utils/icons/icon_thermometer.png'
             pixmap = QPixmap(icon_dir)
-            icon.setPixmap(pixmap.scaled(20, 20))
+            self.icon.setPixmap(pixmap.scaled(20, 20))
             self.trendingButton[i] = QPushButton("")
             self.trendingButton[i].setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
             self.trendingButton[i].setStatusTip('Data Trending') 
             self.trendingButton[i].clicked.connect(self.trendWindow)
             
             if i < 16:
-                SecondGridLayout.addWidget(icon, i, 0)
+                SecondGridLayout.addWidget(self.icon, i, 0)
                 #SecondGridLayout.addWidget(self.trendingButton[i], i, 1)
                 SecondGridLayout.addWidget(LabelChannel[i], i, 2)
                 SecondGridLayout.addWidget(self.ChannelBox[i], i, 3)
             else:
-                SecondGridLayout.addWidget(icon, i-16, 4)
+                SecondGridLayout.addWidget(self.icon, i-16, 4)
                 #SecondGridLayout.addWidget(self.trendingButton[i], i-16, 5)
                 SecondGridLayout.addWidget(LabelChannel[i], i-16, 6)
                 SecondGridLayout.addWidget(self.ChannelBox[i], i-16 , 7)
@@ -109,7 +109,7 @@ class ADCMonitoringData(QMainWindow):
         self.timer.stop() 
                    
     def update_adc_channels(self):
-        #self._channels_values = np.random.randint(1,101,len(self.n_channels))
+        adc_channels_reg = self.main.get_adc_channels_reg()
         adc_updated = []
         for i in np.arange(len(self.n_channels)):
             self.main.set_index(self.index)
@@ -117,9 +117,16 @@ class ADCMonitoringData(QMainWindow):
             self.main.send_sdo_can()
             data_point = self.main.get_data_point()
             adc_updated = np.append(adc_updated,data_point)
-            self.ChannelBox[i].setText(str(adc_updated[i]))
-            #self.ChannelBox[i].setText(str(self._channels_values[i]))
-
+            adc_converted = self.adc_conversion(adc_channels_reg[str(i+3)], adc_updated[i])
+            self.ChannelBox[i].setText(str(round(adc_converted,3)))
+               
+    def adc_conversion(self, adc_channels_reg = "V", value = None):
+        if adc_channels_reg == "V":
+            value = value * 207*10e-6 *40
+        else:
+            value = value * 207*10e-6
+        return value
+    
     def trendWindow(self):
         self.trend = QMainWindow()
         self.trendChildWindow(self.trend)

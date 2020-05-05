@@ -96,6 +96,9 @@ class ControlServer(object):
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
+        self.__pill2kill = Event()
+        self.__lock = Lock()
+        #self.__kvaserLock = Lock()
         self.logger.success('... Done!')
         if GUI is not None:
             self.start_graphicalInterface()
@@ -386,15 +389,16 @@ class ControlServer(object):
         t0 = time.perf_counter()
         messageValid = False
         while time.perf_counter() - t0 < timeout / 1000:
-            for i, (cobid_ret, ret, dlc, flag, t) in zip(range(len(self.__canMsgQueue)), self.__canMsgQueue):
-                messageValid = (dlc == 8 
-                                and cobid_ret == SDO_TX + nodeId
-                                and ret[0] in [0x80, 0x43, 0x47, 0x4b, 0x4f, 0x42] 
-                                and int.from_bytes([ret[1], ret[2]], 'little') == index
-                                and ret[3] == subindex)
-                if messageValid:
-                    del self.__canMsgQueue[i]
-                    break
+            with self.__lock:
+                for i, (cobid_ret, ret, dlc, flag, t) in zip(range(len(self.__canMsgQueue)), self.__canMsgQueue):
+                    messageValid = (dlc == 8 
+                                    and cobid_ret == SDO_TX + nodeId
+                                    and ret[0] in [0x80, 0x43, 0x47, 0x4b, 0x4f, 0x42] 
+                                    and int.from_bytes([ret[1], ret[2]], 'little') == index
+                                    and ret[3] == subindex)
+                    if messageValid:
+                        del self.__canMsgQueue[i]
+                        break
             if messageValid:
                 break
         else:
@@ -450,22 +454,24 @@ class ControlServer(object):
         designed to be used as a :class:`~threading.Thread`.
         """
         self.logger.notice('Starting pulling of CAN messages')
-        while True:
-            try:
-                if self.__interface == 'Kvaser':
-                    frame = self.__ch.read()
-                    cobid, data, dlc, flag, t = (frame.id, frame.data,
-                                                 frame.dlc, frame.flags,
-                                                 frame.timestamp)
-                    if frame is None or (cobid == 0 and dlc == 0):
-                        raise canlib.CanNoMsg
-                else:
-                    cobid, data, dlc, flag, t = self.__ch.getMessage()
-                self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-                self.dumpMessage(cobid, data, dlc, flag)
-                return cobid, data, dlc, flag, t
-            except (canlib.CanNoMsg, analib.CanNoMsg):
-                pass
+        while not self.__pill2kill.is_set():
+            while True:
+                try:
+                    if self.__interface == 'Kvaser':
+                        frame = self.__ch.read()
+                        cobid, data, dlc, flag, t = (frame.id, frame.data,
+                                                     frame.dlc, frame.flags,
+                                                     frame.timestamp)
+                        if frame is None or (cobid == 0 and dlc == 0):
+                            raise canlib.CanNoMsg
+                    else:
+                        cobid, data, dlc, flag, t = self.__ch.getMessage()
+                    with self.__lock:
+                        self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
+                    self.dumpMessage(cobid, data, dlc, flag)
+                    return cobid, data, dlc, flag, t
+                except (canlib.CanNoMsg, analib.CanNoMsg):
+                    pass
         
     #The following functions are to read the can messages
     def _anagateCbFunc(self):
@@ -505,7 +511,8 @@ class ControlServer(object):
             """
             data = ct.string_at(data, dlc)
             t = time.time()
-            self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
+            with self.__lock:
+                self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
             self.dumpMessage(cobid, data, dlc, flag)
         
         return cbFunc
