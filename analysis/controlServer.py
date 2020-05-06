@@ -24,9 +24,13 @@ import coloredlogs as cl
 from canlib import canlib, Frame
 from canlib.canlib.exceptions import CanGeneralError
 from canlib.canlib import ChannelData
-import analib
+#import analib
 rootdir = os.path.dirname(os.path.abspath(__file__))
-
+try:
+    import analib
+except:
+    analib = canlib#or anything to log
+    
 class ControlServer(object):
     def __init__(self, parent=None, 
                  config=None, interface= None,
