@@ -26,7 +26,6 @@ import binascii
 # Third party modules
 import coloredlogs as cl
 import verboselogs
-import analib
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 class MainWindow(QMainWindow):
     
@@ -435,10 +434,6 @@ class MainWindow(QMainWindow):
 
     def get_adc_channels_reg(self):
         return self.__adc_channels_reg
-        
-    def get_DllVersion(self):
-        ret = analib.wrapper.dllInfo()
-        return ret
     
     def get_nodeIds(self):
         return self.__nodeIds
