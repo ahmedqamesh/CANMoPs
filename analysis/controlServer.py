@@ -24,13 +24,13 @@ import coloredlogs as cl
 from canlib import canlib, Frame
 from canlib.canlib.exceptions import CanGeneralError
 from canlib.canlib import ChannelData
-#import analib
+from termcolor import colored
 rootdir = os.path.dirname(os.path.abspath(__file__))
 try:
     import analib
 except:
-    analib = canlib#or anything to log
-    
+    print (colored("Warning: AnaGate Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any AnaGate commercial controllers.", "green"))
+    analib = canlib
 class ControlServer(object):
     def __init__(self, parent=None, 
                  config=None, interface= None,
@@ -96,13 +96,15 @@ class ControlServer(object):
         if Set_CAN:
             self.set_canController(interface = interface)
             self.logger.success(str(self))
-            
+                        
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 10)
         self.__pill2kill = Event()
         self.__lock = Lock()
         #self.__kvaserLock = Lock()
+
+            
         self.logger.success('... Done!')
         if GUI is not None:
             self.start_graphicalInterface()
@@ -381,9 +383,9 @@ class ControlServer(object):
         self.logger.info(f'Send SDO read request to node {nodeId}.')
         cobid = SDO_RX + nodeId
         msg = [0 for i in range(MAX_DATABYTES)]
+        msg[0] = 0x40
         msg[1], msg[2] = index.to_bytes(2, 'little')
         msg[3] = subindex
-        msg[0] = 0x40
         try:
             self.writeCanMessage(cobid, msg, timeout=timeout)
         except CanGeneralError:
@@ -446,7 +448,7 @@ class ControlServer(object):
             self.__ch.writeWait(frame,timeout)
         else:
             if not self.__ch.deviceOpen:
-                self.logger.notice('Reopening AnaGate CAN interface')          
+                self.logger.notice('Reopening AnaGate CAN interface')
             self.__ch.write(cobid, msg, flag)
 
     def readCanMessages(self):
@@ -459,23 +461,22 @@ class ControlServer(object):
         """
         self.logger.notice('Starting pulling of CAN messages')
         while not self.__pill2kill.is_set():
-            while True:
-                try:
-                    if self.__interface == 'Kvaser':
-                        frame = self.__ch.read()
-                        cobid, data, dlc, flag, t = (frame.id, frame.data,
-                                                     frame.dlc, frame.flags,
-                                                     frame.timestamp)
-                        if frame is None or (cobid == 0 and dlc == 0):
-                            raise canlib.CanNoMsg
-                    else:
-                        cobid, data, dlc, flag, t = self.__ch.getMessage()
-                    with self.__lock:
-                        self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-                    self.dumpMessage(cobid, data, dlc, flag)
-                    return cobid, data, dlc, flag, t
-                except (canlib.CanNoMsg, analib.CanNoMsg):
-                    pass
+            try:
+                if self.__interface == 'Kvaser':
+                    frame = self.__ch.read()
+                    cobid, data, dlc, flag, t = (frame.id, frame.data,
+                                                 frame.dlc, frame.flags,
+                                                 frame.timestamp)
+                    if frame is None or (cobid == 0 and dlc == 0):
+                        raise canlib.CanNoMsg
+                else:
+                    cobid, data, dlc, flag, t = self.__ch.getMessage()
+                with self.__lock:
+                    self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
+                self.dumpMessage(cobid, data, dlc, flag)
+                return cobid, data, dlc, flag, t
+            except (canlib.CanNoMsg, analib.CanNoMsg):
+                pass
         
     #The following functions are to read the can messages
     def _anagateCbFunc(self):

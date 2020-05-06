@@ -225,7 +225,7 @@ class MainWindow(QMainWindow):
     def canMessageWindow(self):
         self.MessageWindow = QMainWindow()
         self.canMessageChildWindow(self.MessageWindow)
-        #self.MessageWindow.show()
+        self.MessageWindow.show()
 
     def canSettingsWindow(self):
         MainWindow = QMainWindow()
@@ -323,6 +323,8 @@ class MainWindow(QMainWindow):
             bytes =list(map(int, self.get_bytes()))
             #Send the can Message
             self.set_textBox_message(comunication_object = "SDO_RX", msg =str(bytes))
+            interface = self.get_interface()
+            self.server.set_canController(interface = interface)
             self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
             # receive the message
             self.read_can()
@@ -331,8 +333,7 @@ class MainWindow(QMainWindow):
 
     def read_can(self):
         cobid, data, dlc, flag, t = self.server.readCanMessages()
-        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(data))
-    
+        self.set_textBox_message(comunication_object = "SDO_TX", msg =str(data.hex()))
     '''
     Define set/get functions
     '''
@@ -741,6 +742,7 @@ class MainWindow(QMainWindow):
         send_button = QPushButton("Send")
         send_button.setIcon(QIcon('graphics_Utils/icons/icon_true.png'))
         send_button.clicked.connect(self.send_can)
+        
         
         close_button = QPushButton("close")
         close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
