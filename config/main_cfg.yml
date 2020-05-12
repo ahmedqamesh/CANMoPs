@@ -6,7 +6,7 @@ Application:
 CAN_settings:
         nodeIds: [1]
 
-Devices:    ["MOPS"] 
+Devices:    ["PSPP"] 
 
 default_values:
     interface_items : ["----","AnaGate" , "Kvaser","Others"]
