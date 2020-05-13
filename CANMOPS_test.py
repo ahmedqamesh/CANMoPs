@@ -15,10 +15,10 @@ def test():
     index = 0x1000
     Byte0= cmd = 0x40 #Defines a read (reads data only from the node) dictionary object in CANOPN standard
     Byte1, Byte2 = index.to_bytes(2, 'little')
-    Byte3 = subindex = 0 
-    server.set_channelConnection(interface = interface)
+    Byte3 = subindex = 0
+    #server.set_channelConnection(interface = interface)
     server.start_channelConnection(interface = interface)
-    server.set_channelConnection(interface = interface)
+    #server.set_channelConnection(interface = interface)
     server.confirmNodes()
     
     #write CAN message [read dictionary request from master to node]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import *
 import time
+import datetime
 import sys
 import os
 from matplotlib.backends.backend_qt5agg import FigureCanvas
@@ -31,6 +32,11 @@ try:
 except:
     print (colored("Warning: AnaGate Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any AnaGate commercial controllers.", "green"))
     analib = canlib
+
+class BusEmptyError(Exception):
+    pass
+
+
 class ControlServer(object):
     def __init__(self, parent=None, 
                  config=None, interface= None,
@@ -162,14 +168,12 @@ class ControlServer(object):
             self.__canMsgThread = Thread(target=self.readCanMessages)
         else:
             self.__ch = analib.Channel(self.__ipAddress, self.__channel, baudrate=self.__bitrate)        
-            #self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
-            #self.__ch.setCallback(self.__cbFunc)
                         
     def start_channelConnection(self, interface = None):
         self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)# New from tutorial
+            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)
             self.__ch.setBusParams(self.__bitrate)
             if not self.__busOn:
                 self.logger.notice('Going in \'Bus On\' state ...')
@@ -188,6 +192,44 @@ class ControlServer(object):
             self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
             self.__ch.setCallback(self.__cbFunc)  
 
+    def dump_can_mesages(self):
+        """Start the server and open the |CAN| connection
+        Make sure that this is called so that the connection is established.
+        This method has a small error tolerance and restarts 2 two times in
+        case of errors.
+        """
+        count = 0
+        while count < 3:
+            try:
+                if self.__interface == 'Kvaser':
+                    self.logger.notice('Opening CAN channel ...')
+                    self.__ch = \
+                        canlib.openChannel(self.__channel,
+                                           canlib.canOPEN_ACCEPT_VIRTUAL)
+                    self.logger.info(str(self))
+                    self.__ch.setBusParams(self.__bitrate)
+                    if not self.__busOn:
+                        self.logger.notice('Going in \'Bus On\' state ...')
+                        self.__busOn = True
+                    self.__ch.busOn()
+                    self.__canMsgThread = Thread(target=self.readCanMessages)
+                    self.__canMsgThread.start()
+                else:
+                    if not self.__ch.deviceOpen:
+                        self.logger.notice('Reopening AnaGate CAN interface')
+                        self.__ch.openChannel()
+                    if self.__ch.state != 'CONNECTED':
+                        self.logger.notice('Restarting AnaGate CAN interface.')
+                        self.__ch.restart()
+                        time.sleep(10)    
+            except BusEmptyError as ex:
+                self.__isinit = False
+                self.logger.error(ex)
+                self.stop()
+                self.logger.notice('Restarting in 60 seconds ...')
+                time.sleep(60)
+        else:
+            self.logger.critical('The third try failed. Exiting.')
     def stop(self):
         """Close |CAN| channel and stop the |OPCUA| server
         Make sure that this is called so that the connection is closed in a
@@ -471,7 +513,6 @@ class ControlServer(object):
         the :class:`~threading.Event` :attr:`pill2kill` and is therefore
         designed to be used as a :class:`~threading.Thread`.
         """
-        self.logger.notice('Starting pulling of CAN messages')
         while not self.__pill2kill.is_set():
             try:
                 if self.__interface == 'Kvaser':
@@ -485,7 +526,7 @@ class ControlServer(object):
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
                 with self.__lock:
                     self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-                self.dumpMessage(cobid, data, dlc, flag)
+                self.dumpMessage(cobid, data, dlc, flag, t)
                 return cobid, data, dlc, flag, t
             except (canlib.CanNoMsg, analib.CanNoMsg):
                 pass
@@ -529,13 +570,14 @@ class ControlServer(object):
             """
             data = ct.string_at(data, dlc)
             t = time.time()
+            
             with self.__lock:
                 self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-            self.dumpMessage(cobid, data, dlc, flag)
+            self.dumpMessage(cobid, data, dlc, flag, t)
         
         return cbFunc
     
-    def dumpMessage(self,cobid, msg, dlc, flag):
+    def dumpMessage(self,cobid, msg, dlc, flag, t):
         """Dumps a CANopen message to the screen and log file
     
         Parameters
@@ -549,6 +591,7 @@ class ControlServer(object):
         flag : :obj:`int`
             Flags, a combination of the :const:`canMSG_xxx` and
             :const:`canMSGERR_xxx` values
+        t : obj'int'
         """
         if (flag & canlib.canMSG_ERROR_FRAME != 0):
             print("***ERROR FRAME RECEIVED***")
@@ -557,6 +600,8 @@ class ControlServer(object):
             for i in range(len(msg)):
                 msgstr += '{:02x}  '.format(msg[i])
             msgstr += '    ' * (8 - len(msg))
+            st = datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
+            msgstr += str(st)
             self.logger.info(coc.MSGHEADER)
             self.logger.info(msgstr)
                                                   

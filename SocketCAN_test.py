@@ -4,6 +4,14 @@ import time
 import can
 bustype = ['socketcan',"pcan","ixxat","vector"]
 channel = 'vcan0'
+
+can.rc['interface'] = 'socketcan'
+can.rc['channel'] = 'ch0'
+can.rc['bitrate'] = 125000
+from can.interface import Bus
+bus = Bus()
+
+
 def producer(id, N = None):
     """:param id: Spam the bus with messages including the data id."""
     bus = can.interface.Bus(bustype=bustype[0], channel=channel, bitrate=125000)
@@ -24,8 +32,9 @@ def producer(id, N = None):
     time.sleep(1)
 
 
-if __name__ == '__main__':       
-    producer(40, N = 2)
+if __name__ == '__main__':
+    pass    
+    #producer(1, N = 5)
 
 
     

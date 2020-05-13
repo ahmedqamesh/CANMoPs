@@ -26,6 +26,9 @@ import sys  # We need sys so that we can pass argv to QApplication
 import os
 from graphics_Utils import dataMonitoring
 
+bytearray(b'\x00P\x80\xfe\x01(\x02\x00')
+stra = str(bytearray(b'\x00P\x80\xfe\x01(\x02\x00'))
+print(stra)
 #app = QtWidgets.QApplication(sys.argv)
 #MessageWindow = QMainWindow()
 #mainWindow.MainWindow().adcChannelChildWindow(MessageWindow)

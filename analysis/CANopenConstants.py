@@ -17,7 +17,7 @@ from canlib import canlib
 MAX_DATABYTES = 8
 """:obj:`int` : The maxmimum number of data bytes in a standard |CAN|
 message"""
-MSGHEADER = 'ID  DLC DATA' + ' ' * (MAX_DATABYTES * 4 - 4) + 'TIME'
+MSGHEADER = 'ID DLC  D0--D1--D2--D3--D4--D5--D6--D7' + '    Time '# * (MAX_DATABYTES * 4 - 4) + 'TIME'
 """:obj:`str` : Used as header for output of |CAN| messages"""
 PSPP_REGISTERS = {'ChipID1': 0, 'ChipID2': 1, 'ADCR1': 2, 'ADCR2': 3, 'DIN': 4,
                   'DIN': 4, 'DOUT': 5, 'Bypass': 6, 'ADCmux': 7, 'ADCL1': 8,

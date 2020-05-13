@@ -270,6 +270,9 @@ class MainWindow(QMainWindow):
             interface = self.get_interface()
             self.server.set_interface(interface)
             self.server.set_channelConnection(interface=interface)
+            if interface == "Kvaser":
+                self.server.start_channelConnection(interface = interface)
+                self.server.set_channelConnection(interface=interface)
         else:
            self.server.stop()
 
@@ -318,7 +321,7 @@ class MainWindow(QMainWindow):
         # printing response 
         self.set_textBox_message(comunication_object="SDO_TX", msg=str(response_from_node))
         # print decoded response
-        decoded_response = f'{response_from_node:03X}\n-----------------------------------'
+        decoded_response = f'{response_from_node:03X}\n-----------------------------------------------'
         self.set_textBox_message(comunication_object="Decoded", msg=decoded_response)
             
     def send_can(self):
@@ -639,45 +642,35 @@ class MainWindow(QMainWindow):
         
         SecondGroupBox = QGroupBox("")
         SecondGridLayout = QGridLayout()
-        ByteList = ["Byte0 :", "Byte1 :", "Byte2 :", "Byte3 :", "Byte4 :", "Byte5 :"]
-        textOutputBox= [ByteList[i] for i in np.arange(len(ByteList))]        
+        ByteList = [" Chn", "  Id", " Flg", " DLC", "D0--D1--D2--D3--D4--D5--D6--D7", " Time"]
+        self.textOutputBox= [ByteList[i] for i in np.arange(len(ByteList))] 
+        textOutputLabel= [ByteList[i] for i in np.arange(len(ByteList))]        
         for i in np.arange(len(ByteList)):
-            textOutputBox[i]= QTextEdit("")
+            self.textOutputBox[i]= QTextEdit("")
+            textOutputLabel[i]= QLabel(ByteList[i])
+            if i == 0 or i ==1  or i ==2:
+                self.textOutputBox[i].setFixedWidth(10) 
+            if i == 3:
+                self.textOutputBox[i].setFixedWidth(20) 
             if i == 4:
-                textOutputBox[i].setFixedWidth(300) 
+                self.textOutputBox[i].setFixedWidth(210)
             else:
-                textOutputBox[i].setFixedWidth(50)
-            #textOutputBox[i].setTabStopWidth(12) 
-            textOutputBox[i].setReadOnly(True)
-            SecondGridLayout.addWidget(textOutputBox[i], 0,i)
+                self.textOutputBox[i].setFixedWidth(60)
+            self.textOutputBox[i].setTabStopWidth(12) 
+            self.textOutputBox[i].setReadOnly(True)
+            SecondGridLayout.addWidget(textOutputLabel[i], 0,i)
+            SecondGridLayout.addWidget(self.textOutputBox[i], 1,i)
         SecondGroupBox.setLayout(SecondGridLayout) 
-        SecondGroupBox.setStyleSheet("background-color: white ; border-color: white; border-style: outset;border-width: 3px ")
-        def read_can():
-            cobid, data, dlc, flag, t = self.server.readCanMessages() 
-            channel = self.server.get_channelNumber()
-            #f'Ch:{channel},Flag:{flag},ID: {cobid:03X}, DLC: {dlc}, Data: {data.hex()},Time: {t}'
-            data = [data[v].to_bytes(2, 'little') for v in np.arange(len(data))]
-            
-            for i in np.arange(len(ByteList)):
-                result = [channel,str(flag)[12:], cobid,  dlc, data,  t]
-                textOutputBox[i].append(str(result[i]))
-            read_can()
-            
-        def start_timer(period=10000):
-            self.outtimer = QtCore.QTimer()
-            self.outtimer.timeout.connect(read_can)
-            self.outtimer.start()
-        
-        def stop_timer():
-            self.outtimer.stop()
-        run_button.clicked.connect(read_can)
-        #stop_button.clicked.connect(stop_timer)    
-        #random_button.clicked.connect(self.send_can) 
+        SecondGroupBox.setStyleSheet("background-color: white ; border-color: white; border-style: outset;border-width: 1px ")
+ 
+        run_button.clicked.connect(self.dump_can)
+        stop_button.clicked.connect(self.stop_dumptimer)    
+        random_button.clicked.connect(self.dump_can) 
         
         HBox = QHBoxLayout()
         close_button = QPushButton("close")
         close_button.setIcon(QIcon('graphics_Utils/icons/icon_close.jpg'))
-        close_button.clicked.connect(stop_timer)
+        close_button.clicked.connect(self.stop_dumptimer)
         close_button.clicked.connect(ChildWindow.close)
         HBox.addWidget(close_button)
                  
@@ -687,6 +680,40 @@ class MainWindow(QMainWindow):
         plotframe.setLayout(MainLayout) 
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
+        
+    def start_dumptimer(self, period=1000):
+        self.outtimer = QtCore.QTimer(self)
+        self.outtimer.start(period)
+        self.outtimer.timeout.connect(self.dump_can)     
+    
+    def stop_dumptimer(self):
+        try:
+            self.outtimer.stop()
+        except Exception:
+            pass
+            
+    def dump_can(self):
+        ByteList = [" Chn", "Id", "Flg", "DLC", "D0--D1--D2--D3--D4--D5--D6--D7", "Time"]
+        try:
+            cobid, data, dlc, flag, t = self.server.readCanMessages()
+        except Exception:
+            pass   
+#         channel = self.server.get_channelNumber()
+#         data = int.from_bytes(data, byteorder=sys.byteorder)
+#         b1,b2,b3,b4,b5,b6,b7, b8 = data.to_bytes(8, 'little') 
+#         for i in np.arange(len(ByteList)):
+#             result = [channel, cobid,str(flag)[12:],dlc, f'{b1:02x}  {b2:02x}  {b3:02x}  {b4:02x}  {b5:02x}  {b6:02x}  {b7:02x}  {b8:02x}',t]
+#             self.textOutputBox[i].append(str(result[i]))
+#             self.textOutputBox[i].append("  ")    
+    def random_can(self):
+        NodeIds = self.server.get_nodeIds()
+        SDO_RX = 0x600
+        Byte0= cmd = 0x40 #Defines a read (reads data only from the node) dictionary object in CANOPN standard
+        index = np.random.randint(1000,2500)
+        Byte1, Byte2 = index.to_bytes(2, 'little')
+        Byte3 = subindex = np.random.randint(0,8)
+        self.server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=3000)
+        self.server.readCanMessages()
         
     def adcMonitoringData(self, ChildWindow):
         self.n_channels = np.arange(3, 35)
@@ -890,7 +917,7 @@ class MainWindow(QMainWindow):
         
     def _toolBar(self, toolbar, mainwindow):        
         canMessage_action = QAction(QIcon('graphics_Utils/icons/icon_msg.jpg'), '&CAN Message', mainwindow)
-        canMessage_action.setShortcut('Ctrl+N')
+        canMessage_action.setShortcut('Ctrl+M')
         canMessage_action.setStatusTip('CAN Message')
         canMessage_action.triggered.connect(self.canMessageWindow)
 
@@ -900,14 +927,36 @@ class MainWindow(QMainWindow):
         settings_action.triggered.connect(self.canSettingsWindow)
 
         canDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_dump.png'), '&CAN Dump', mainwindow)
-        canDumpMessage_action.setShortcut('Ctrl+R')
+        canDumpMessage_action.setShortcut('Ctrl+D')
         canDumpMessage_action.setStatusTip('Send Random Messages to the bus')
-        canDumpMessage_action.triggered.connect(self.canDumpMessageWindow)
+        canDumpMessage_action.triggered.connect(self.dump_can)
+
+        runDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_right.jpg'), '&CAN Run', mainwindow)
+        runDumpMessage_action.setShortcut('Ctrl+R')
+        runDumpMessage_action.setStatusTip('start reading CAN messages')
+        runDumpMessage_action.triggered.connect(self.start_dumptimer)
         
+        
+        stopDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_stop.png'), '&CAN Stop', mainwindow)
+        stopDumpMessage_action.setShortcut('Ctrl+C')
+        stopDumpMessage_action.setStatusTip('Stop reading CAN messages')
+        stopDumpMessage_action.triggered.connect(self.stop_dumptimer)
+        
+
+        RandomDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_random.png'), '&CAN Random', mainwindow)
+        RandomDumpMessage_action.setShortcut('Ctrl+G')
+        RandomDumpMessage_action.setStatusTip('Send Random Messages to the bus')
+        RandomDumpMessage_action.triggered.connect(self.random_can)
+                
         toolbar.addAction(canMessage_action)
         toolbar.addAction(settings_action)
-        toolbar.addAction(canDumpMessage_action)
         toolbar.addSeparator()
+        toolbar.addAction(canDumpMessage_action)
+        #toolbar.addAction(runDumpMessage_action)
+        #toolbar.addAction(stopDumpMessage_action)
+        toolbar.addAction(RandomDumpMessage_action)
+        
+       
         
     def clicked(self, q):
         print("is clicked")                             
