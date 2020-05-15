@@ -44,7 +44,7 @@ class ControlServer(object):
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
                  channel =None,ipAddress =None,
-                 GUI = None, Set_CAN = False,
+                 set_channel = False,
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
         super(ControlServer, self).__init__() # super keyword to call its methods from a subclass:
@@ -65,22 +65,24 @@ class ControlServer(object):
         self.__subIndex         =   conf["default_values"]["subIndex"]
         self.__cobid            =   conf["default_values"]["cobid"]
         self.__dlc              =   conf["default_values"]["dlc"]
-        
-        self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
-        self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
-        self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
-        self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
+        
+        if interface == "Kvaser":
+            self.__interface        =   conf['CAN_Interface']['Kvaser']['name']
+            self.__channel          =   conf['CAN_Interface']['Kvaser']['channel']
+            self.__ipAddress        =   conf['CAN_Interface']['Kvaser']['ipAddress']
+            self.__bitrate          =   int(conf['CAN_Interface']['Kvaser']['bitrate'])
+        
+        if interface == "AnaGate":  
+            self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
+            self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
+            self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
+            self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
+        else:
+            interface =None            
         self.logger.notice('... Loading all the configurations!')
                 
          # Initialize default arguments
-        if interface is None:
-            interface = self.__interface     
-        elif interface not in ['Kvaser', 'AnaGate']:
-            raise ValueError(f'Possible CAN interfaces are "Kvaser" or '
-                             f'"AnaGate" and not "{interface}".')
-        self.__interface = interface
-        
         if bitrate is None:
             bitrate = self.__bitrate
             
@@ -93,6 +95,7 @@ class ControlServer(object):
             channel = self.__channel
         """:obj:`int` : Internal attribute for the bit rate"""
         self.__bitrate = bitrate
+       
         """Internal attribute for the |CAN| channel"""
         self.__ch = None        
         """:obj:`int` : Internal attribute for the IP Address"""  
@@ -100,20 +103,17 @@ class ControlServer(object):
             ipAddress = self.__ipAddress
 
         """Internal attribute for the |CAN| channel"""
-        if Set_CAN:
+        if set_channel:
+            self.set_channelConnection(interface = self.__interface)
             self.logger.success(str(self))
-            self.set_channelConnection(interface = interface)
-            
                         
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
-        self.__canMsgQueue = deque([], 10)
+        self.__canMsgQueue = deque([], 2)
         self.__pill2kill = Event()
         self.__lock = Lock()
         #self.__kvaserLock = Lock()
         self.logger.success('... Done!')
-        if GUI is not None:
-            self.start_graphicalInterface()
         
     def __str__(self):
         if self.__interface == 'Kvaser':
@@ -125,27 +125,8 @@ class ControlServer(object):
                 chdata_serial = chdata.card_serial_no
                 return f'Using {chdataname}, EAN: {chdata_EAN}, Serial No.:{chdata_serial}'
         else:
-            return f'{self.__ch}'
-
-    def start_graphicalInterface(self):
-        self.logger.notice('Opening a graphical user Interface')
-        qapp = QtWidgets.QApplication(sys.argv)
-        from graphics_Utils import mainWindow
-        app = mainWindow.MainWindow()
-        app.Ui_ApplicationWindow()
-        qapp.exec_()
-        
-    def confirmNodes(self, timeout=100):
-        self.logger.notice('Checking node connections ...')
-        for nodeId in self.__nodeIds:
-            dev_t = self.sdoRead(nodeId, 0x1000, 0, timeout)
-            if dev_t is None:
-                self.logger.error(f'Node {nodeId} did not answer!')
-                # self.__nodeIds.remove(nodeId)
-            else:
-                self.logger.info(f'Connection to node {nodeId} has been '
-                                 f'verified.')
-        self.logger.success('... Done!')
+            ret = analib.wrapper.dllInfo()# DLL version
+            return f'{self.__ch}, Bitrate:{self.__bitrate}'
         
     def _parseBitRate(self, bitrate):
         if self.__interface == 'Kvaser':
@@ -158,26 +139,37 @@ class ControlServer(object):
                 raise ValueError(f'Bitrate {bitrate} not in list of allowed '
                                  f'values!')
             return bitrate
-
+    
+    def confirmNodes(self, timeout=100):
+        self.logger.notice('Checking node connections ...')
+        for nodeId in self.__nodeIds:
+            dev_t = self.sdoRead(nodeId, 0x1000, 0, timeout)
+            if dev_t is None:
+                self.logger.error(f'Node {nodeId} did not answer!')
+                # self.__nodeIds.remove(nodeId)
+            else:
+                self.logger.info(f'Connection to node {nodeId} has been '
+                                 f'verified.')
+        self.logger.success('... Done!')
+        
     def set_channelConnection(self, interface = None):
-        self.logger.notice('Setting the channel connection...')
+        self.logger.notice('Setting the channel ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
+            self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
         else:
-            self.__ch = analib.Channel(self.__ipAddress, self.__channel, baudrate=self.__bitrate)        
-                        
+            self.__ch = analib.Channel(ipAddress=self.__ipAddress, port= self.__channel, baudrate=self.__bitrate)
+             
+            
     def start_channelConnection(self, interface = None):
         self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)
-            self.__ch.setBusParams(self.__bitrate)
-            if not self.__busOn:
-                self.logger.notice('Going in \'Bus On\' state ...')
-                self.__busOn = True
+            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)# New from tutorial
+            self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
             self.__canMsgThread.start()
@@ -188,55 +180,22 @@ class ControlServer(object):
             if self.__ch.state != 'CONNECTED':
                 self.logger.notice('Restarting AnaGate CAN interface.')
                 self.__ch.restart()
-                time.sleep(10)   
             self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
-            self.__ch.setCallback(self.__cbFunc)  
-
-    def dump_can_mesages(self):
-        """Start the server and open the |CAN| connection
-        Make sure that this is called so that the connection is established.
-        This method has a small error tolerance and restarts 2 two times in
-        case of errors.
-        """
-        count = 0
-        while count < 3:
-            try:
-                if self.__interface == 'Kvaser':
-                    self.logger.notice('Opening CAN channel ...')
-                    self.__ch = \
-                        canlib.openChannel(self.__channel,
-                                           canlib.canOPEN_ACCEPT_VIRTUAL)
-                    self.logger.info(str(self))
-                    self.__ch.setBusParams(self.__bitrate)
-                    if not self.__busOn:
-                        self.logger.notice('Going in \'Bus On\' state ...')
-                        self.__busOn = True
-                    self.__ch.busOn()
-                    self.__canMsgThread = Thread(target=self.readCanMessages)
-                    self.__canMsgThread.start()
-                else:
-                    if not self.__ch.deviceOpen:
-                        self.logger.notice('Reopening AnaGate CAN interface')
-                        self.__ch.openChannel()
-                    if self.__ch.state != 'CONNECTED':
-                        self.logger.notice('Restarting AnaGate CAN interface.')
-                        self.__ch.restart()
-                        time.sleep(10)    
-            except BusEmptyError as ex:
-                self.__isinit = False
-                self.logger.error(ex)
-                self.stop()
-                self.logger.notice('Restarting in 60 seconds ...')
-                time.sleep(60)
-        else:
-            self.logger.critical('The third try failed. Exiting.')
+            self.__ch.setCallback(self.__cbFunc)
+            
     def stop(self):
         """Close |CAN| channel and stop the |OPCUA| server
         Make sure that this is called so that the connection is closed in a
         correct manner. When this class is used within a :obj:`with` statement
         this method is called automatically when the statement is exited.
         """
+        with self.lock:
+            self.cnt['Residual CAN messages'] = len(self.__canMsgQueue)
+        self.logger.notice(f'Error counters: {self.cnt}')
+        self.logger.warning('Stopping helper threads. This might take a '
+                            'minute')
         self.logger.warning('Closing the CAN channel.')
+        self.__pill2kill.set()
         if self.__busOn:
             if self.__interface == 'Kvaser':
                 try:
@@ -247,8 +206,8 @@ class ControlServer(object):
                 self.__ch.busOff()
             else:
                 pass
-            self.__busOn = False
-            self.__ch.close()
+        self.__busOn = False
+        self.__ch.close()
         self.logger.warning('Stopping the server.')
 
         
@@ -266,8 +225,9 @@ class ControlServer(object):
         self.__bytes = x
         
     def set_interface(self, x):
+        self.logger.success('Setting the interface to %s' %x)
         self.__interface = x
-        self.logger.success(str(self))
+        self.__str__()
         
                 
     def set_nodeIds(self,x):
@@ -283,7 +243,7 @@ class ControlServer(object):
         if self.__interface == 'Kvaser':
             self.stop()
             self.__bitrate = bitrate
-            #self.start()
+            self.start()
         else:
             self.__bitrate = bitrate 
             
@@ -293,7 +253,8 @@ class ControlServer(object):
     
     def get_nodeIds(self):
         return self.__nodeIds
-   
+
+    
     def get_bitrate(self):
         return self.__bitrate
 
@@ -429,7 +390,6 @@ class ControlServer(object):
         SDO_RX = 0x600
         interface = self.get_interface()
         self.start_channelConnection(interface=interface)
-        
         if nodeId is None or index is None or subindex is None:
             self.logger.warning('SDO read protocol cancelled before it could begin.')         
             return None
@@ -515,6 +475,7 @@ class ControlServer(object):
         """
         while not self.__pill2kill.is_set():
             try:
+                
                 if self.__interface == 'Kvaser':
                     frame = self.__ch.read()
                     cobid, data, dlc, flag, t = (frame.id, frame.data,
@@ -525,12 +486,11 @@ class ControlServer(object):
                 else:
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
                 with self.__lock:
-                    self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-                self.dumpMessage(cobid, data, dlc, flag, t)
+                     self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
+                self.dumpMessage(cobid, data, dlc, flag,t)
                 return cobid, data, dlc, flag, t
             except (canlib.CanNoMsg, analib.CanNoMsg):
                 pass
-        
         
     #The following functions are to read the can messages
     def _anagateCbFunc(self):
@@ -570,16 +530,15 @@ class ControlServer(object):
             """
             data = ct.string_at(data, dlc)
             t = time.time()
-            
             with self.__lock:
                 self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-            self.dumpMessage(cobid, data, dlc, flag, t)
+            self.dumpMessage(cobid, data, dlc, flag,t)
         
         return cbFunc
     
-    def dumpMessage(self,cobid, msg, dlc, flag, t):
+    def dumpMessage(self, cobid, msg, dlc, flag, t):
         """Dumps a CANopen message to the screen and log file
-    
+
         Parameters
         ----------
         cobid : :obj:`int`
@@ -593,8 +552,9 @@ class ControlServer(object):
             :const:`canMSGERR_xxx` values
         t : obj'int'
         """
+
         if (flag & canlib.canMSG_ERROR_FRAME != 0):
-            print("***ERROR FRAME RECEIVED***")
+            self.logger.error("***ERROR FRAME RECEIVED***")
         else:
             msgstr = '{:3X} {:d}   '.format(cobid, dlc)
             for i in range(len(msg)):

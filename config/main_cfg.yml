@@ -23,14 +23,14 @@ CAN_Interface:
         bitrate     :   125000
         ipAddress   :   '192.168.1.254'
         timeout     :   500
-        channel     :   0
+        channel     :   1
     
     Kvaser  :
         name        :   'Kvaser'
         bitrate     :   125000
+        ipAddress   :   '192.168.1.254'
         timeout     :   500
         channel     :   0
-
     
 Other:
     user    :   "Ahmed Qamesh"

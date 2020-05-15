@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+import signal
 from typing import *
 import sched, time
 import sys
@@ -91,7 +92,6 @@ class MainWindow(QMainWindow):
         self.menu._createMenu(self)
         self._createtoolbar(self)
         self.menu._createStatusBar(self)
-        self.server = controlServer.ControlServer()
         # 1. Window settings
         self.setWindowTitle(self.__appName + "_" + self.__appVersion)
         self.setWindowIcon(QtGui.QIcon(self.__appIconDir))
@@ -143,8 +143,9 @@ class MainWindow(QMainWindow):
         self.connectButton.setIcon(icon)
         self.connectButton.setStatusTip('Connect the interface and set the channel')
         self.connectButton.setCheckable(True)
-        self.connectButton.clicked.connect(self.set_connect)
 
+        self.connectButton.clicked.connect(self.set_connect)
+        
         self.GridLayout = QGridLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
@@ -217,7 +218,32 @@ class MainWindow(QMainWindow):
         self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
         self.deviceButton.clicked.connect(self.deviceWindow)
         self.HLayout.addWidget(self.deviceButton)
-      
+
+    def trendChildWindow(self, childWindow):
+        childWindow.setObjectName("TrendingWindow")
+        childWindow.setWindowTitle("Trending Window")
+        childWindow.resize(900, 500)  # w*h
+        logframe = QFrame(self)
+        logframe.setLineWidth(0.6)
+        childWindow.setCentralWidget(logframe)
+        trendLayout = QHBoxLayout()
+        self.WindowGroupBox = QGroupBox("")
+        self.Fig = dataMonitoring.LiveMonitoringData()
+        self.Fig.setStyleSheet("background-color: black;"
+                                        "color: black;"
+                                        "border-width: 1.5px;"
+                                        "border-color: black;"
+                                        "margin:0.0px;"
+                                        # "border: 1px "
+                                        "solid black;")
+
+        self.distribution = dataMonitoring.LiveMonitoringDistribution()
+        trendLayout.addWidget(self.distribution)
+        trendLayout.addWidget(self.Fig)
+        
+        self.WindowGroupBox.setLayout(trendLayout)
+        logframe.setLayout(trendLayout) 
+             
     # Functions to run
     def showAdcChannelWindow(self):
         self.adcWindow = QMainWindow()
@@ -242,8 +268,7 @@ class MainWindow(QMainWindow):
 
     def trendWindow(self):
         self.trend = QMainWindow()
-        self.ui = childWindow.ChildWindow()
-        self.ui.trendChildWindow(self.trend)
+        self.trendChildWindow(self.trend)
         self.trend.show()
             
     def deviceWindow(self):
@@ -268,11 +293,8 @@ class MainWindow(QMainWindow):
     def set_connect(self):
         if self.connectButton.isChecked():
             interface = self.get_interface()
-            self.server.set_interface(interface)
-            self.server.set_channelConnection(interface=interface)
-            if interface == "Kvaser":
-                self.server.start_channelConnection(interface = interface)
-                self.server.set_channelConnection(interface=interface)
+            self.server = controlServer.ControlServer(interface =interface, set_channel =True)
+            #self.server.set_channelConnection(interface=interface)
         else:
            self.server.stop()
 
@@ -307,8 +329,11 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         
-    def error_message(self, text=False):
-        QMessageBox.about(self, "Error Message", text)
+    def error_message(self, text=False, checknode =False):
+        if checknode:
+            self.server.confirmNodes()
+        if text: 
+            QMessageBox.about(self, "Error Message", text)
      
     def print_sdo_can(self, nodeId=None , index=None, subIndex=None, response_from_node="response_from_node"):
         # printing the read message with cobid = SDO_RX + nodeId
@@ -333,13 +358,10 @@ class MainWindow(QMainWindow):
             bytes = list(map(int, textboxValue))
             # Send the can Message
             self.set_textBox_message(comunication_object="SDO_RX", msg=str(bytes))
-            interface = self.get_interface()
-            self.server.set_channelConnection(interface=interface)
             self.server.writeCanMessage(cobid, bytes, flag=0, timeout=1000)
             # receive the message
             self.read_can()
         except Exception:
-            self.server.confirmNodes()
             self.error_message(text="Make sure that the CAN interface is connected")
 
     def read_can(self):
@@ -663,7 +685,7 @@ class MainWindow(QMainWindow):
         SecondGroupBox.setLayout(SecondGridLayout) 
         SecondGroupBox.setStyleSheet("background-color: white ; border-color: white; border-style: outset;border-width: 1px ")
  
-        run_button.clicked.connect(self.dump_can)
+        run_button.clicked.connect(self.start_dumptimer)
         stop_button.clicked.connect(self.stop_dumptimer)    
         random_button.clicked.connect(self.dump_can) 
         
@@ -673,18 +695,40 @@ class MainWindow(QMainWindow):
         close_button.clicked.connect(self.stop_dumptimer)
         close_button.clicked.connect(ChildWindow.close)
         HBox.addWidget(close_button)
-                 
-        MainLayout.addWidget(FirstGroupBox , 0, 0)
+        
+        #MainLayout.addWidget(FirstGroupBox , 0, 0)
         MainLayout.addWidget(SecondGroupBox , 1, 0)
         MainLayout.addLayout(HBox , 2, 0)
         plotframe.setLayout(MainLayout) 
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
-        
+    
+    def updateCanDump(self,TIMEOUT = 2):
+        ByteList = [" Chn", "Id", "Flg", "DLC", "D0--D1--D2--D3--D4--D5--D6--D7", "Time"]
+        def timeout_handler(signum, frame):
+            try:
+                raise TimeoutException
+            except Exception:
+                pass
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(TIMEOUT)    
+        try:
+            cobid, data, dlc, flag, t = self.server.readCanMessages()
+            channel = self.server.get_channelNumber()
+            data = int.from_bytes(data, byteorder=sys.byteorder)
+            b1,b2,b3,b4,b5,b6,b7, b8 = data.to_bytes(8, 'little') 
+            for i in np.arange(len(ByteList)):
+                result = [channel, cobid,str(flag),dlc, f'{b1:02x}   {b2:02x}   {b3:02x}   {b4:02x}   {b5:02x}  {b6:02x}   {b7:02x}   {b8:02x}',t]
+                self.textOutputBox[i].append(str(result[i]))
+                self.textOutputBox[i].append("  ")    
+        except Exception:
+            pass
+    
     def start_dumptimer(self, period=1000):
         self.outtimer = QtCore.QTimer(self)
         self.outtimer.start(period)
-        self.outtimer.timeout.connect(self.dump_can)     
+        self.outtimer.timeout.connect(self.updateCanDump)     
+    
     
     def stop_dumptimer(self):
         try:
@@ -692,29 +736,33 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
             
-    def dump_can(self):
-        ByteList = [" Chn", "Id", "Flg", "DLC", "D0--D1--D2--D3--D4--D5--D6--D7", "Time"]
+    def dump_can(self,  TIMEOUT = 5):
+        def timeout_handler(signum, frame):
+            try:
+                raise TimeoutException
+            except Exception:
+                pass
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(TIMEOUT)    
         try:
-            cobid, data, dlc, flag, t = self.server.readCanMessages()
+            self.server.readCanMessages()
         except Exception:
-            pass   
-#         channel = self.server.get_channelNumber()
-#         data = int.from_bytes(data, byteorder=sys.byteorder)
-#         b1,b2,b3,b4,b5,b6,b7, b8 = data.to_bytes(8, 'little') 
-#         for i in np.arange(len(ByteList)):
-#             result = [channel, cobid,str(flag)[12:],dlc, f'{b1:02x}  {b2:02x}  {b3:02x}  {b4:02x}  {b5:02x}  {b6:02x}  {b7:02x}  {b8:02x}',t]
-#             self.textOutputBox[i].append(str(result[i]))
-#             self.textOutputBox[i].append("  ")    
-    def random_can(self):
-        NodeIds = self.server.get_nodeIds()
+            self.error_message(text ="Make sure that the controller is connected")
+        
+    def random_can(self): 
         SDO_RX = 0x600
         Byte0= cmd = 0x40 #Defines a read (reads data only from the node) dictionary object in CANOPN standard
         index = np.random.randint(1000,2500)
         Byte1, Byte2 = index.to_bytes(2, 'little')
         Byte3 = subindex = np.random.randint(0,8)
-        self.server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=3000)
-        self.server.readCanMessages()
-        
+        try:
+            self.server.set_channelConnection(interface =self.get_interface())
+            NodeIds = self.server.get_nodeIds()
+            self.server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=3000)
+            self.server.readCanMessages()
+        except:
+            self.error_message(text ="Make sure that the controller is connected")
+            
     def adcMonitoringData(self, ChildWindow):
         self.n_channels = np.arange(3, 35)
         ChildWindow.setObjectName("ADCChannels")
@@ -756,7 +804,7 @@ class MainWindow(QMainWindow):
             
             if i < 16:
                 SecondGridLayout.addWidget(self.icon, i, 0)
-                # SecondGridLayout.addWidget(self.trendingButton[i], i, 1)
+                #SecondGridLayout.addWidget(self.trendingButton[i], i, 1)
                 SecondGridLayout.addWidget(LabelChannel[i], i, 2)
                 SecondGridLayout.addWidget(self.ChannelBox[i], i, 3)
             else:
@@ -795,8 +843,11 @@ class MainWindow(QMainWindow):
         self.timer.start(period)
     
     def stop_timer(self):
-        self.timer.stop() 
-                   
+        try:
+            self.timer.stop() 
+        except Exception:
+            pass
+               
     def update_adc_channels(self):
         adc_index = self.get_adc_index()
         adc_channels_reg = self.get_adc_channels_reg()
@@ -928,13 +979,13 @@ class MainWindow(QMainWindow):
 
         canDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_dump.png'), '&CAN Dump', mainwindow)
         canDumpMessage_action.setShortcut('Ctrl+D')
-        canDumpMessage_action.setStatusTip('Send Random Messages to the bus')
+        canDumpMessage_action.setStatusTip('Dump CAN messages from the bus')
         canDumpMessage_action.triggered.connect(self.dump_can)
 
         runDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_right.jpg'), '&CAN Run', mainwindow)
         runDumpMessage_action.setShortcut('Ctrl+R')
         runDumpMessage_action.setStatusTip('start reading CAN messages')
-        runDumpMessage_action.triggered.connect(self.start_dumptimer)
+        runDumpMessage_action.triggered.connect(self.canDumpMessageWindow)
         
         
         stopDumpMessage_action = QAction(QIcon('graphics_Utils/icons/icon_stop.png'), '&CAN Stop', mainwindow)
@@ -949,7 +1000,7 @@ class MainWindow(QMainWindow):
         RandomDumpMessage_action.triggered.connect(self.random_can)
                 
         toolbar.addAction(canMessage_action)
-        toolbar.addAction(settings_action)
+        #toolbar.addAction(settings_action)
         toolbar.addSeparator()
         toolbar.addAction(canDumpMessage_action)
         #toolbar.addAction(runDumpMessage_action)
@@ -1134,7 +1185,7 @@ class MainWindow(QMainWindow):
             description_text = self.index_description_items + "<br>" + self.subindex_description_items
             self.indexTextBox.setText(description_text)    
         
-        
+    
 if __name__ == "__main__":
     pass
 

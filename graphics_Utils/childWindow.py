@@ -89,7 +89,7 @@ class ChildWindow(QWidget):
         
         self.WindowGroupBox.setLayout(trendLayout)
         logframe.setLayout(trendLayout) 
-  
+        ChildWindow.show()
     def clicked(self, q):
         print("is clicked")
     

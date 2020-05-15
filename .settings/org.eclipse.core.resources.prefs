@@ -1,5 +1,6 @@
 eclipse.preferences.version=1
 encoding//analysis/CANopenConstants.py=utf-8
 encoding//graphics_Utils/mainWindow.py=utf-8
+encoding//graphics_Utils/test_files/test_AnaGate.py=utf-8
 encoding/CANMOPS_GUI.py=utf-8
 encoding/CANMOPS_test.py=utf-8
