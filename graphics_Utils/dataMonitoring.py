@@ -171,8 +171,10 @@ class LiveMonitoringData(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(LiveMonitoringData, self).__init__(parent)
         self.compute_initial_figure()
+        self.initiate_timer(period = 2000)
         self.plot_style()
         self.main = mainWindow.MainWindow()
+        
         
     def compute_initial_figure(self):                   
         self.graphWidget = pg.PlotWidget(background="w")

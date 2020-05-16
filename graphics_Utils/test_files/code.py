@@ -1,38 +1,35 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import QTimer, QTime, Qt
- 
-class AppDemo(QWidget):
+from PyQt5.QtWidgets import (QWidget, QLabel, QHBoxLayout,QCheckBox, QApplication)
+from PyQt5 import QtCore
+
+class basicWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.resize(250, 150)
-        layout = QVBoxLayout()
-        fnt = QFont('Open Sans', 120, QFont.Bold)
- 
-        self.lbl = QLabel()
-        self.lbl.setAlignment(Qt.AlignCenter)
-        self.lbl.setFont(fnt)
-        layout.addWidget(self.lbl)
- 
+        
+        layout = QHBoxLayout()
         self.setLayout(layout)
- 
-        timer = QTimer(self)
-        timer.timeout.connect(self.showTime)
-        timer.start(1000) # update every second
- 
-        self.showTime()
- 
-    def showTime(self):
-        currentTime = QTime.currentTime()
- 
-        displayTxt = currentTime.toString('hh:mm:ss')
-        print(displayTxt)
- 
-        self.lbl.setText(displayTxt)
- 
- 
-app = QApplication(sys.argv)
-demo = AppDemo()
-demo.show()
-app.exit(app.exec_())
+        
+        self.checkBoxA = QCheckBox("Select This.")
+        self.labelA = QLabel("Not slected.")
+        
+        self.checkBoxA.stateChanged.connect(self.checkBoxChangedAction)
+        
+        layout.addWidget(self.checkBoxA)
+        layout.addWidget(self.labelA)
+        
+        self.setGeometry(200, 200, 300, 200)            
+                
+        self.setWindowTitle('CheckBox Example')
+    
+    def checkBoxChangedAction(self, state):
+        if (QtCore.Qt.Checked == state):
+            self.labelA.setText("Selected.")
+        else:
+            self.labelA.setText("Not Selected.")
+        
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    windowExample = basicWindow()
+    windowExample.show()
+    sys.exit(app.exec_())
