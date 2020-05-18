@@ -821,7 +821,7 @@ class MainWindow(QMainWindow):
         dictionary = self.__dictionary_items
         adc_index = self.get_adc_index()
         self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=adc_index))
-        self.Figure = self.compute_initial_figure(index =int(str(1)))
+        #self.Figure = self.compute_initial_figure(index =int(str(1)))
         for i in np.arange(len(self.n_channels)):
             LabelChannel[i] = QLabel("Channel", self)
             LabelChannel[i].setText("Ch" + str(self.n_channels[i]) + ":")
@@ -893,6 +893,7 @@ class MainWindow(QMainWindow):
             print('Checked', )
         else:
             print('Unchecked')
+    
     def initiate_timer(self, period=10000):
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_adc_channels)
