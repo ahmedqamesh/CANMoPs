@@ -816,7 +816,8 @@ class MainWindow(QMainWindow):
         adc_channels_reg = self.get_adc_channels_reg()
         dictionary = self.__dictionary_items
         adc_index = self.get_adc_index()
-        self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=adc_index)) 
+        self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=adc_index))
+        self.Figure = self.compute_initial_figure(index =int(str(1)))
         for i in np.arange(len(self.n_channels)):
             LabelChannel[i] = QLabel("Channel", self)
             LabelChannel[i].setText("Ch" + str(self.n_channels[i]) + ":")
@@ -842,14 +843,14 @@ class MainWindow(QMainWindow):
             #self.trendingBox[i].stateChanged.connect(self.stateBox)
             if i < 16:
                 SecondGridLayout.addWidget(self.icon, i, 0)
-                #SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
-                SecondGridLayout.addWidget(self.trendingBotton[i], i, 2)
+                SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
+                #SecondGridLayout.addWidget(self.trendingBotton[i], i, 2)
                 SecondGridLayout.addWidget(LabelChannel[i], i, 3)
                 SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
             else:
                 SecondGridLayout.addWidget(self.icon, i - 16, 5)
-                #SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
-                SecondGridLayout.addWidget(self.trendingBotton[i], i-16, 7)
+                SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
+                #SecondGridLayout.addWidget(self.trendingBotton[i], i-16, 7)
                 SecondGridLayout.addWidget(LabelChannel[i], i - 16, 8)
                 SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
         SecondGroupBox.setLayout(SecondGridLayout) 
@@ -876,6 +877,7 @@ class MainWindow(QMainWindow):
         HBox.addWidget(stop_button)
         HBox.addWidget(close_button)
         MainLayout.addWidget(SecondGroupBox , 1, 0)
+        #MainLayout.addWidget(self.Figure , 1,1)
         MainLayout.addLayout(HBox , 2, 0)
         self._createStatusBar(self)
         plotframe.setLayout(MainLayout) 

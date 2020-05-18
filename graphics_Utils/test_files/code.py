@@ -1,35 +1,20 @@
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 import sys
-from PyQt5.QtWidgets import (QWidget, QLabel, QHBoxLayout,QCheckBox, QApplication)
-from PyQt5 import QtCore
 
-class basicWindow(QWidget):
+class Window(QWidget):
     def __init__(self):
-        super().__init__()
-        
-        layout = QHBoxLayout()
+        QWidget.__init__(self)
+        layout = QGridLayout()
         self.setLayout(layout)
-        
-        self.checkBoxA = QCheckBox("Select This.")
-        self.labelA = QLabel("Not slected.")
-        
-        self.checkBoxA.stateChanged.connect(self.checkBoxChangedAction)
-        
-        layout.addWidget(self.checkBoxA)
-        layout.addWidget(self.labelA)
-        
-        self.setGeometry(200, 200, 300, 200)            
-                
-        self.setWindowTitle('CheckBox Example')
-    
-    def checkBoxChangedAction(self, state):
-        if (QtCore.Qt.Checked == state):
-            self.labelA.setText("Selected.")
-        else:
-            self.labelA.setText("Not Selected.")
-        
+        label1 = QLabel("Widget in Tab 1.")
+        label2 = QLabel("Widget in Tab 2.")
+        tabwidget = QTabWidget()
+        tabwidget.addTab(label1, "Tab 1")
+        tabwidget.addTab(label2, "Tab 2")
+        layout.addWidget(tabwidget, 0, 0)
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    windowExample = basicWindow()
-    windowExample.show()
-    sys.exit(app.exec_())
+app = QApplication(sys.argv)
+screen = Window()
+screen.show()
+sys.exit(app.exec_())

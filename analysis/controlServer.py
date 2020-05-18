@@ -156,6 +156,7 @@ class ControlServer(object):
         self.logger.notice('Setting the channel ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
+            print(self.__bitrate)
             self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
