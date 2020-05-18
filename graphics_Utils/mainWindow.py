@@ -55,14 +55,12 @@ class MainWindow(QMainWindow):
         self.__subIndex = conf["default_values"]["subIndex"]
         self.__cobid = conf["default_values"]["cobid"]
         self.__dlc = conf["default_values"]["dlc"]
-
-        self.__interface = conf['CAN_Interface']['AnaGate']['name']
-        self.__channel = conf['CAN_Interface']['AnaGate']['channel']
-        self.__ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
-        self.__bitrate = conf['CAN_Interface']['AnaGate']['bitrate']
         self.__nodeIds = conf["CAN_settings"]["nodeIds"]
         self.__devices = conf["Devices"]
-
+        self.__interface =  None
+        self.__channel = None
+        self.__ipAddress =  None
+        self.__bitrate = None
         self.configureDeviceBox(None)
         self.index_description_items = None
         self.subIndex_description_items = None
@@ -131,8 +129,13 @@ class MainWindow(QMainWindow):
     def defaultWindow(self):
         __interfaceItems = self.__interfaceItems
         self.interfaceComboBox = QComboBox(self)
+        def get_interface_combo():
+            interface = self.interfaceComboBox.currentText()
+            self.set_interface(interface)
+            return interface
         for item in __interfaceItems[1:]: self.interfaceComboBox.addItem(item)
         self.interfaceComboBox.activated[str].connect(self.set_interface)
+        
         self.interfaceComboBox.setStatusTip('Select the connected interface')
         self.connectButton = QPushButton("")
         self.connectButton.setIcon(QIcon('graphics_Utils/icons/icon_disconnect.jpg'))
@@ -143,7 +146,8 @@ class MainWindow(QMainWindow):
         self.connectButton.setIcon(icon)
         self.connectButton.setStatusTip('Connect the interface and set the channel')
         self.connectButton.setCheckable(True)
-
+        
+        self.connectButton.clicked.connect(get_interface_combo)
         self.connectButton.clicked.connect(self.set_connect)
         
         self.GridLayout = QGridLayout()

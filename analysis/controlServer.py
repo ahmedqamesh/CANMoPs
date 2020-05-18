@@ -66,7 +66,6 @@ class ControlServer(object):
         self.__cobid            =   conf["default_values"]["cobid"]
         self.__dlc              =   conf["default_values"]["dlc"]
         self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
-        
         if interface == "Kvaser":
             self.__interface        =   conf['CAN_Interface']['Kvaser']['name']
             self.__channel          =   conf['CAN_Interface']['Kvaser']['channel']
@@ -81,7 +80,6 @@ class ControlServer(object):
         else:
             interface =None            
         self.logger.notice('... Loading all the configurations!')
-                
          # Initialize default arguments
         if bitrate is None:
             bitrate = self.__bitrate

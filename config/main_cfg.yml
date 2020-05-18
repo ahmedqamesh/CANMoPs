@@ -6,6 +6,7 @@ Application:
 CAN_settings:
         nodeIds: [1]
 
+
 Devices:    ["PSPP"] 
 
 default_values:
