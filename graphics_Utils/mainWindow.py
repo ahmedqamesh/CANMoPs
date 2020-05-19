@@ -222,65 +222,7 @@ class MainWindow(QMainWindow):
         self.deviceButton.clicked.connect(self.deviceWindow)
         self.HLayout.addWidget(self.deviceButton)
 
-    def trendChildWindow(self, childWindow =  None, index =  None):
-        childWindow.setObjectName("TrendingWindow")
-        childWindow.setWindowTitle("Trending Window")
-        childWindow.resize(900, 500)  # w*h
-        logframe = QFrame(self)
-        logframe.setLineWidth(0.6)
-        childWindow.setCentralWidget(logframe)
-        trendLayout = QHBoxLayout()
-        self.WindowGroupBox = QGroupBox("")
-        self.Fig = self.compute_initial_figure(index =int(str(index)))
-        self.initiate_trend_timer(index =int(str(index)))
-        self.Fig.setStyleSheet("background-color: black;"
-                                        "color: black;"
-                                        "border-width: 1.5px;"
-                                        "border-color: black;"
-                                        "margin:0.0px;"
-                                        # "border: 1px "
-                                        "solid black;")
-
-        self.distribution = dataMonitoring.LiveMonitoringDistribution()
-        #trendLayout.addWidget(self.distribution)
-        trendLayout.addWidget(self.Fig)
-        
-        self.WindowGroupBox.setLayout(trendLayout)
-        logframe.setLayout(trendLayout) 
-
-    def compute_initial_figure(self, index =  None):                   
-        self.graphWidget = pg.PlotWidget(background="w")
-        self.setCentralWidget(self.graphWidget)
-        self.x = list(range(2))  # 100 time points
-        self.y = [0 for _ in range(2)]  # 100 data points
-        self.data_line =  self.graphWidget.plot(self.x, self.y, pen=pg.mkPen(color=(255, 0, 0), width=3), name= "channel%i"%index)
-        # Add Title
-        self.graphWidget.setTitle("Online data monitoring")
-        # Add Axis Labels
-        self.graphWidget.setLabel('left', "<span style=\"color:black; font-size:15px\">CAN Data</span>")
-        self.graphWidget.setLabel('bottom', "<span style=\"color:black; font-size:15px\">Time [s]</span>")
-
-        # Add legend
-        self.graphWidget.addLegend()
-        
-        # Add grid
-        self.graphWidget.showGrid(x=True, y=True)
-        self.graphWidget.getAxis("bottom").setStyle(tickTextOffset=10)
-        # Set Range
-        # self.graphWidget.setXRange(0, 100, padding=0)
-        # self.graphWidget.setYRange(00, 55, padding=0)
-        return self.graphWidget
-    
-    def update_trending_figure(self,index =None):
-        print("Ch",self.n_channels[index],"is",self.adc_converted[index])
-        data_line = self.graphWidget.plot(self.x, self.y, pen=pg.mkPen(color=(255, 0, 0), width=3))
-        self.x = self.x[1:]  # Remove the first y element.
-        self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
-        data = self.adc_converted[index] #np.random.randint(1000,2500)
-        self.y = self.y[1:]  # Remove the first 
-        self.y.append(data)  # Add a new random value.
-        data_line.setData(self.x, self.y)  # Update the data.
-
+      
     # Functions to run
     def showAdcChannelWindow(self):
         self.adcWindow = QMainWindow()
@@ -804,7 +746,7 @@ class MainWindow(QMainWindow):
     def adcMonitoringData(self, ChildWindow):
         ChildWindow.setObjectName("ADCChannels")
         ChildWindow.setWindowTitle("ADC Channels")
-        ChildWindow.resize(350, 600)  # w*h
+        ChildWindow.resize(600, 600)  # w*h 350
         MainLayout = QGridLayout()
         # Define a frame for that group
         plotframe = QFrame(ChildWindow)
@@ -820,9 +762,13 @@ class MainWindow(QMainWindow):
         adc_channels_reg = self.get_adc_channels_reg()
         dictionary = self.__dictionary_items
         adc_index = self.get_adc_index()
+        
         self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=adc_index))
-        #self.Figure = self.compute_initial_figure(index =int(str(1)))
+        self.x = [0 for i in np.arange(len(self.n_channels))]
+        self.y = [0 for i in np.arange(len(self.n_channels))]
         for i in np.arange(len(self.n_channels)):
+            self.x[i] = list(range(2))  # 10 time points
+            self.y[i] = [0 for _ in range(2)]  # 10 data points
             LabelChannel[i] = QLabel("Channel", self)
             LabelChannel[i].setText("Ch" + str(self.n_channels[i]) + ":")
             self.ChannelBox[i] = QLineEdit("", self)
@@ -842,23 +788,24 @@ class MainWindow(QMainWindow):
             self.trendingBotton[i].setStatusTip('Data Trending')
             #self.trendingBotton[i].clicked.connect(self.trendWindow)
             
-            self.trendingBox[i] = QCheckBox("")
-            self.trendingBox[i].setStatusTip('Data Trending') 
-            #self.trendingBox[i].stateChanged.connect(self.stateBox)
+            self.trendingBox[i] = QCheckBox(str(i))
+            self.trendingBox[i].setStatusTip('Data Trending')
+            self.trendingBox[i].setChecked(False)
+            self.trendingBox[i].stateChanged.connect(self.stateBox)
             if i < 16:
                 SecondGridLayout.addWidget(self.icon, i, 0)
                 SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
                 #SecondGridLayout.addWidget(self.trendingBotton[i], i, 2)
                 SecondGridLayout.addWidget(LabelChannel[i], i, 3)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
+                #SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
             else:
                 SecondGridLayout.addWidget(self.icon, i - 16, 5)
                 SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
                 #SecondGridLayout.addWidget(self.trendingBotton[i], i-16, 7)
                 SecondGridLayout.addWidget(LabelChannel[i], i - 16, 8)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
+                #SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
         SecondGroupBox.setLayout(SecondGridLayout) 
-        
+        Figure = self.compute_initial_figure()
         HBox = QHBoxLayout()
         send_button = QPushButton("run")
         send_button.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
@@ -881,37 +828,56 @@ class MainWindow(QMainWindow):
         HBox.addWidget(stop_button)
         HBox.addWidget(close_button)
         MainLayout.addWidget(SecondGroupBox , 1, 0)
-        #MainLayout.addWidget(self.Figure , 1,1)
+        #MainLayout.addWidget(Figure , 1,1)
         MainLayout.addLayout(HBox , 2, 0)
         self._createStatusBar(self)
         plotframe.setLayout(MainLayout) 
         self._createStatusBar(ChildWindow)
         QtCore.QMetaObject.connectSlotsByName(ChildWindow)
 
-    def stateBox(self, state):
-        if state == QtCore.Qt.Checked:
-            print('Checked', )
+    def stateBox(self, checked):
+        #if state == QtCore.Qt.Checked:
+        checkBox = self.sender() 
+        if checked:
+            print(checkBox.text())
         else:
-            print('Unchecked')
-    
-    def initiate_timer(self, period=10000):
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.update_adc_channels)
-        self.timer.start(period)
+            print(checkBox.text())
 
-    def initiate_trend_timer(self,index =None, period=10000):
-        def update_trending_figure(index =None):
-            self.update_trending_figure(index =None)
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(update_trending_figure)
-        self.timer.start(period)
+    def compute_initial_figure(self):
+        self.graphWidget = pg.PlotWidget(background="w")
+        self.data_line = [0 for i in np.arange(len(self.n_channels))]
+        self.col_row = ["#ededed", "#f7e5b2","#fcc48d","#e64e4b","#984071","#58307b","#432776","#3b265e","#4f2e6b","#943ca6","#df529e","#f49cae","#f7d2bb","#f4ce9f",
+                   "#ecaf83","#dd8a5b","#904a5d","#5d375a","#402b55","#332d58","#3b337a","#365a9b","#2c4172","#2f3f60","#3f5d92","#4e7a80","#60b37e","#b3daa3",
+                   "#cfe8b7","#d2d2ba","#bab59e","#8b7c99","#6a5c9d"",#4c428d","#3a3487","#31222c"]   
+        for i in np.arange(len(self.n_channels)):
+            if self.trendingBox[i].isChecked():
+                self.data_line[i] = self.graphWidget.plot(name = "Ch%i"%i)
+                # Add legend
+                self.graphWidget.addLegend(offset=(10, 10+i*20))
             
-    def stop_timer(self):
-        try:
-            self.timer.stop() 
-        except Exception:
-            pass
-               
+        # Add Title
+        self.graphWidget.setTitle("Online data monitoring")
+        # Add Axis Labels
+        self.graphWidget.setLabel('left', "<span style=\"color:black; font-size:15px\">CAN Data</span>")
+        self.graphWidget.setLabel('bottom', "<span style=\"color:black; font-size:15px\">Time [s]</span>")
+
+        # Add grid
+        self.graphWidget.showGrid(x=True, y=True)
+        self.graphWidget.getAxis("bottom").setStyle(tickTextOffset=10)
+        # Set Range
+        self.graphWidget.setXRange(0, 100, padding=0)
+        # self.graphWidget.setYRange(00, 55, padding=0)
+        return self.graphWidget
+ 
+    def update_figure(self, data = None, i = None):
+        #self.graphWidget.addLegend(offset=(10, 10+i*20))
+        self.data_line[i] = self.graphWidget.plot(self.x[i][2:], self.y[i][2:], pen=pg.mkPen(color=self.col_row[i],width=2),name = "Ch%i"%i)
+        self.x[i] = self.x[i][1:]  # Remove the first x element.
+        self.x[i] = np.append(self.x[i], self.x[i][-1]+ 1)  # Add a new value 1 higher than the last.
+        self.y[i] = self.y[i][1:]  # Remove the first   y element.
+        self.y[i].append(data)  # Add a new value.
+        self.data_line[i].setData(self.x[i], self.y[i])  # Update the data.
+                 
     def update_adc_channels(self):
         adc_index = self.get_adc_index()
         adc_channels_reg = self.get_adc_channels_reg()
@@ -926,8 +892,10 @@ class MainWindow(QMainWindow):
             self.adc_converted = np.append(self.adc_converted,self.adc_conversion(adc_channels_reg[str(i + 3)], adc_updated[i]))
             if self.adc_converted[i] is not None:
                 self.ChannelBox[i].setText(str(round(self.adc_converted[i], 3)))
+                if self.trendingBox[i].isChecked():
+                    self.update_figure(data = self.adc_converted[i], i = i)
             else:
-                self.ChannelBox[i].setText(str(self.adc_converted[i]))  
+                self.ChannelBox[i].setText(str(self.adc_converted[i]))
         return self.adc_converted
     
     def adc_conversion(self, adc_channels_reg="V", value=None):
@@ -937,8 +905,45 @@ class MainWindow(QMainWindow):
             else:
                 value = value * 207 * 10e-6
         return value
-                           
-                
+        
+    def initiate_timer(self, period=10000):
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.update_adc_channels)
+        self.timer.start(period)
+
+    def stop_timer(self):
+        try:
+            self.timer.stop() 
+        except Exception:
+            pass
+
+
+    def trendChildWindow(self, childWindow =  None, index =  None):
+        childWindow.setObjectName("TrendingWindow")
+        childWindow.setWindowTitle("Trending Window")
+        childWindow.resize(900, 500)  # w*h
+        logframe = QFrame(self)
+        logframe.setLineWidth(0.6)
+        childWindow.setCentralWidget(logframe)
+        trendLayout = QHBoxLayout()
+        self.WindowGroupBox = QGroupBox("")
+        self.Fig = self.compute_initial_figure()
+        self.initiate_trend_timer(index =int(str(index)))
+        self.Fig.setStyleSheet("background-color: black;"
+                                        "color: black;"
+                                        "border-width: 1.5px;"
+                                        "border-color: black;"
+                                        "margin:0.0px;"
+                                        # "border: 1px "
+                                        "solid black;")
+
+        self.distribution = dataMonitoring.LiveMonitoringDistribution()
+        #trendLayout.addWidget(self.distribution)
+        trendLayout.addWidget(self.Fig)
+        
+        self.WindowGroupBox.setLayout(trendLayout)
+        logframe.setLayout(trendLayout) 
+        
     def deviceChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("DeviceWindow")
         ChildWindow.setWindowTitle("Device Window [ " + self.__appName + "]")
