@@ -12,13 +12,12 @@ from graphics_Utils import mainWindow
 import yaml
 cs = False
 wwo = False
-class MenuBar(mainWindow.MainWindow):  
+class MenuBar(QWidget):  
     
     def __init__(self,parent=mainWindow):
         super(MenuBar,self).__init__(parent)
         self.MainWindow = QMainWindow()
-        self.main = mainWindow.MainWindow()
-        self.textBox = self.main.textBox
+
         
     def _createMenu(self,mainwindow):
         menuBar = mainwindow.menuBar()

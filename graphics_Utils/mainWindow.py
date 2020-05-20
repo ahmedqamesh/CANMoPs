@@ -21,9 +21,8 @@ import matplotlib as mpl
 import numpy as np
 from random import randint
 from matplotlib.figure import Figure
-from graphics_Utils import dataMonitoring , menuWindow , logWindow, childWindow
+from graphics_Utils import dataMonitoring , logWindow, childWindow, menuWindow
 from analysis import analysis_utils , controlServer
-from analysis import CANopenConstants as coc
 import binascii
 # Third party modules
 import coloredlogs as cl
@@ -716,7 +715,7 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
             
-    def dump_can(self,  TIMEOUT = 5):
+    def dump_can(self,TIMEOUT = 2):
         def timeout_handler(signum, frame):
             try:
                 raise TimeoutException

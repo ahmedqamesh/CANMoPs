@@ -12,8 +12,11 @@ specification [CiA301]_.
 from math import inf
 # Third party modules
 from aenum import IntEnum
-from canlib import canlib
-
+from termcolor import colored
+try:
+    from canlib import canlib
+except Exception:
+    pass
 MAX_DATABYTES = 8
 """:obj:`int` : The maxmimum number of data bytes in a standard |CAN|
 message"""

@@ -33,5 +33,8 @@ CAN_Interface:
         timeout     :   500
         channel     :   0
     
+    can     :
+        bitrate     :   125000
+        channel     :   "can0"
 Other:
     user    :   "Ahmed Qamesh"

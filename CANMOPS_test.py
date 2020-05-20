@@ -17,7 +17,7 @@ def test():
     Byte1, Byte2 = index.to_bytes(2, 'little')
     Byte3 = subindex = 0 
     #write CAN message [read dictionary request from master to node]
-    #server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=30)
+    server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=30)
     
     #Response from the node to master
     cobid, data, dlc, flag, t = server.readCanMessages()
@@ -26,8 +26,8 @@ def test():
     print('Writing example CAN Expedited read message ...')
 #       
     #Example (1): get node Id
-    VendorId = server.sdoRead(NodeIds[0], 0x1000,0,3000)
-    print(f'VendorId: {VendorId:03X}')
+    #VendorId = server.sdoRead(NodeIds[0], 0x1000,0,3000)
+    #print(f'VendorId: {VendorId:03X}')
 #         
 #     #Example (2): Read channels 
 #     n_channels = np.arange(3,35)

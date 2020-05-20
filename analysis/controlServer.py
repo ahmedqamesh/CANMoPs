@@ -13,26 +13,36 @@ from pathlib import Path
 from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
-from analysis import analysis_utils , controlServer
-from analysis import CANopenConstants as coc
+from analysis import analysis_utils
 # Third party modules
 from collections import deque, Counter
 import ctypes as ct
 import logging
+from termcolor import colored
 from logging.handlers import RotatingFileHandler
 import verboselogs
 import coloredlogs as cl
-from canlib import canlib, Frame
-from canlib.canlib.exceptions import CanGeneralError
-from canlib.canlib import ChannelData
-from termcolor import colored
 rootdir = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    import can
+except:
+    print (colored("Warning: SocketCAN Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any SocketCAN drivers.", "green"))
+
+
+try:
+    from canlib import canlib, Frame
+    from canlib.canlib.exceptions import CanGeneralError
+    from canlib.canlib import ChannelData
+    from analysis import CANopenConstants as coc
+except:
+    print (colored("Warning: Canlib Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any Kvaser commercial controllers.", "green"))
+
 try:
     import analib
 except:
     print (colored("Warning: AnaGate Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any AnaGate commercial controllers.", "green"))
-    analib = canlib
-
+    
 class BusEmptyError(Exception):
     pass
 
@@ -43,7 +53,7 @@ class ControlServer(object):
                  bitrate =None,
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
-                 channel =None,ipAddress =None,
+                 channel =None,ipAddress ="192.168.1.254",
                  set_channel = False,
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
@@ -78,7 +88,9 @@ class ControlServer(object):
             self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
             self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
         else:
-            interface =None            
+            self.__interface        =   interface
+            self.__bitrate          =   int(conf['CAN_Interface']['can']['bitrate'])
+            self.__channel          =   conf['CAN_Interface']['can']['channel']           
         self.logger.notice('... Loading all the configurations!')
          # Initialize default arguments
         if bitrate is None:
@@ -122,9 +134,11 @@ class ControlServer(object):
                 chdata_EAN = chdata.card_upc_no
                 chdata_serial = chdata.card_serial_no
                 return f'Using {chdataname}, EAN: {chdata_EAN}, Serial No.:{chdata_serial}'
-        else:
+        if self.__interface == 'AnaGate':
             ret = analib.wrapper.dllInfo()# DLL version
             return f'{self.__ch}, Bitrate:{self.__bitrate}'
+        else:
+            return f'{self.__ch.channel_info}, Bitrate:{self.__bitrate}'
         
     def _parseBitRate(self, bitrate):
         if self.__interface == 'Kvaser':
@@ -132,12 +146,14 @@ class ControlServer(object):
                 raise ValueError(f'Bitrate {bitrate} not in list of allowed '
                                  f'values!')
             return coc.CANLIB_BITRATES[bitrate]
-        else:
+        if self.__interface == 'AnaGate':
             if bitrate not in analib.constants.BAUDRATES:
                 raise ValueError(f'Bitrate {bitrate} not in list of allowed '
                                  f'values!')
             return bitrate
-    
+        else:
+            return bitrate
+
     def confirmNodes(self, timeout=100):
         self.logger.notice('Checking node connections ...')
         for nodeId in self.__nodeIds:
@@ -154,14 +170,14 @@ class ControlServer(object):
         self.logger.notice('Setting the channel ...')
         if interface == 'Kvaser':
             self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            print(self.__bitrate)
             self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
-        else:
+        if interface == 'AnaGate':
             self.__ch = analib.Channel(ipAddress=self.__ipAddress, port= self.__channel, baudrate=self.__bitrate)
-             
+        else:
+            self.__ch = can.interface.Bus(bustype=interface, channel=self.__channel, bitrate=self.__bitrate)
             
     def start_channelConnection(self, interface = None):
         self.logger.notice('Starting CAN Connection ...')
@@ -203,10 +219,12 @@ class ControlServer(object):
                     pass
                 self.logger.warning('Going in \'Bus Off\' state.')
                 self.__ch.busOff()
+                self.__ch.close()
+            if self.__interface == 'AnaGate':    
+                self.__ch.close()
             else:
-                pass
+                self.__ch.shutdown()
         self.__busOn = False
-        self.__ch.close()
         self.logger.warning('Stopping the server.')
 
         
@@ -459,11 +477,19 @@ class ControlServer(object):
                 timeout = 0xFFFFFFFF
             frame = Frame(id_ = cobid, data = msg)#  from tutorial
             self.__ch.writeWait(frame,timeout)
-        else:
+        if self.__interface == 'AnaGate':
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
             self.__ch.write(cobid, msg, flag)
-
+        else:
+            msg = can.Message(arbitration_id= cobid, data=msg, is_extended_id= False)
+            try:
+                self.__ch.send(msg)
+            except can.CanError:
+                print("Message NOT sent")
+            
+            
+            
     def readCanMessages(self):
         """Read incoming |CAN| messages and store them in the queue
         :attr:`canMsgQueue`.
@@ -474,7 +500,6 @@ class ControlServer(object):
         """
         while not self.__pill2kill.is_set():
             try:
-                
                 if self.__interface == 'Kvaser':
                     frame = self.__ch.read()
                     cobid, data, dlc, flag, t = (frame.id, frame.data,
@@ -482,13 +507,16 @@ class ControlServer(object):
                                                  frame.timestamp)
                     if frame is None or (cobid == 0 and dlc == 0):
                         raise canlib.CanNoMsg
-                else:
+                if self.__interface == 'AnaGate':
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
+                else:
+                    readcan = self.__ch.recv(1.0)
+                    cobid, data, dlc, flag, t = readcan.arbitration_id, readcan.data, readcan.dlc, readcan.is_extended_id, readcan.timestamp
                 with self.__lock:
                      self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
                 self.dumpMessage(cobid, data, dlc, flag,t)
                 return cobid, data, dlc, flag, t
-            except (canlib.CanNoMsg, analib.CanNoMsg):
+            except: #(canlib.CanNoMsg, analib.CanNoMsg):
                 pass
         
     #The following functions are to read the can messages
@@ -551,9 +579,9 @@ class ControlServer(object):
             :const:`canMSGERR_xxx` values
         t : obj'int'
         """
-
-        if (flag & canlib.canMSG_ERROR_FRAME != 0):
-            self.logger.error("***ERROR FRAME RECEIVED***")
+        if self.__interface == 'Kvaser':
+            if (flag & canlib.canMSG_ERROR_FRAME != 0):
+                self.logger.error("***ERROR FRAME RECEIVED***")
         else:
             msgstr = '{:3X} {:d}   '.format(cobid, dlc)
             for i in range(len(msg)):
@@ -561,7 +589,8 @@ class ControlServer(object):
             msgstr += '    ' * (8 - len(msg))
             st = datetime.datetime.fromtimestamp(t).strftime('%H:%M:%S')
             msgstr += str(st)
-            self.logger.info(coc.MSGHEADER)
+            if self.__interface == 'Kvaser':
+                self.logger.info(coc.MSGHEADER)
             self.logger.info(msgstr)
                                                   
 if __name__ == "__main__":
