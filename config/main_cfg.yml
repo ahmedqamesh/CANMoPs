@@ -4,13 +4,13 @@ Application:
     app_icon_dir         :   "graphics_Utils/icons/icon_mops.png"   
 
 CAN_settings:
-        nodeIds: [1]
+        nodeIdsList: [1]
 
 
 Devices:    ["PSPP"] 
 
 default_values:
-    interface_items : ["----","AnaGate" , "Kvaser","Others"]
+    interface_items : ["----","AnaGate" , "Kvaser","socketcan"]
     index_items     : ["0x1000"]
     bitrate_items   : ["10000", "20000", "50000", "62500", "100000", "125000", "250000", "500000", "1000000"]     
     bytes           : ["64","0","16","0","0","0","0","0"] 

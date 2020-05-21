@@ -29,6 +29,8 @@ import coloredlogs as cl
 import verboselogs
 rootdir = os.path.dirname(os.path.abspath(__file__)) 
 
+class TimeoutException(Exception):
+    pass
 
 class MainWindow(QMainWindow):
     
@@ -54,7 +56,7 @@ class MainWindow(QMainWindow):
         self.__subIndex = conf["default_values"]["subIndex"]
         self.__cobid = conf["default_values"]["cobid"]
         self.__dlc = conf["default_values"]["dlc"]
-        self.__nodeIds = conf["CAN_settings"]["nodeIds"]
+        self.__nodeIdsList = conf["CAN_settings"]["nodeIdsList"]
         self.__devices = conf["Devices"]
         self.__interface =  None
         self.__channel = None
@@ -127,11 +129,13 @@ class MainWindow(QMainWindow):
         
     def defaultWindow(self):
         __interfaceItems = self.__interfaceItems
+        __nodeIds   =   self.__nodeIdsList
         self.interfaceComboBox = QComboBox(self)
         def get_interface_combo():
             interface = self.interfaceComboBox.currentText()
             self.set_interface(interface)
             return interface
+        
         for item in __interfaceItems[1:]: self.interfaceComboBox.addItem(item)
         self.interfaceComboBox.activated[str].connect(self.set_interface)
         
@@ -152,39 +156,37 @@ class MainWindow(QMainWindow):
         self.GridLayout = QGridLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
-        nodeitems = list(map(str, self.__nodeIds))
-        nodeComboBox = QComboBox(self)
-        for item in nodeitems: nodeComboBox.addItem(item)
-        nodeComboBox.activated[str].connect(self.set_nodeId)
-        nodeComboBox.setStatusTip('NodeIds as defined in the main_cfg.yml file')
+        nodeItems = list(map(str, __nodeIds))
+        self.nodeComboBox = QComboBox(self)
+        for item in nodeItems: self.nodeComboBox.addItem(item)
+        self.nodeComboBox.setStatusTip('NodeIds as defined in the main_cfg.yml file')
         indexLabel = QLabel("Index", self)
         indexLabel.setText("   Index   ")
         self.mainIndexTextBox = QLineEdit("0x1000", self)
-        # self.indexTextBox.textChanged.connect(self.set_index)
         
         subIndexLabel = QLabel("    SubIndex", self)
         subIndexLabel.setText("SubIndex")
         self.mainSubIndextextbox = QLineEdit(self.__subIndex, self)
-        # self.subIndextextbox.textChanged.connect(self.set_subIndex)
-                
+        
         self.startButton = QPushButton("")
         self.startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
         self.startButton.setStatusTip('Send CAN message')
-        self.startButton.clicked.connect(self.applyLineEditChanges) 
+        self.startButton.clicked.connect(self.applyCANChanges)
         self.startButton.clicked.connect(self.send_sdo_can)                 
                    
         self.GridLayout.addWidget(nodeLabel, 0, 0)
-        self.GridLayout.addWidget(nodeComboBox, 1, 0)   
+        self.GridLayout.addWidget(self.nodeComboBox, 1, 0)   
         self.GridLayout.addWidget(indexLabel, 0, 1)
         self.GridLayout.addWidget(self.mainIndexTextBox, 1, 1)
         self.GridLayout.addWidget(subIndexLabel, 0, 2)
         self.GridLayout.addWidget(self.mainSubIndextextbox, 1, 2)       
         self.GridLayout.addWidget(self.startButton, 1, 3)
 
-    def applyLineEditChanges(self):
+    def applyCANChanges(self):
         self.set_index(self.mainIndexTextBox.text())
         self.set_subIndex(self.mainSubIndextextbox.text())
-
+        self.set_nodeId(self.nodeComboBox.currentText())
+        
     def configureDeviceBox(self, conf):
         self.HLayout = QHBoxLayout()
         deviceLabel = QLabel("Configure Device", self)
@@ -273,7 +275,6 @@ class MainWindow(QMainWindow):
         if self.connectButton.isChecked():
             interface = self.get_interface()
             self.server = controlServer.ControlServer(interface =interface, set_channel =True)
-            #self.server.set_channelConnection(interface=interface)
         else:
            self.server.stop()
 
@@ -294,7 +295,8 @@ class MainWindow(QMainWindow):
     def send_sdo_can(self, trending=False, print_sdo=True):
         index = int(self.get_index(), 16)
         subIndex = int(self.get_subIndex(), 16)
-        nodeId = self.__nodeIds[0]
+        nodeId = self.get_nodeId()
+        nodeId = int(nodeId[0])
         try:
             if self.server == None: 
                 self.server = controlServer.ControlServer()
@@ -345,6 +347,9 @@ class MainWindow(QMainWindow):
 
     def read_can(self):
         cobid, data, dlc, flag, t = self.server.readCanMessages()
+        intdata = int.from_bytes(data, byteorder=sys.byteorder)
+        b1,b2,b3,b4,b5,b6,b7, b8 = intdata.to_bytes(8, 'little') 
+        self.logger.info(f'Got data: [{b1:02x}  {b2:02x}  {b3:02x}  {b4:02x}  {b5:02x}  {b6:02x}  {b7:02x} {b8:02x}]')       
         self.set_textBox_message(comunication_object="SDO_TX", msg=str(data.hex()))
  
     def _createStatusBar(self, childwindow):
@@ -715,18 +720,19 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
             
-    def dump_can(self,TIMEOUT = 2):
+    def dump_can(self,TIMEOUT = 10):
         def timeout_handler(signum, frame):
             try:
                 raise TimeoutException
             except Exception:
-                pass
+                pass  
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(TIMEOUT)    
         try:
             self.server.readCanMessages()
+            signal.alarm(0)
         except Exception:
-            self.error_message(text ="Make sure that the controller is connected")
+            pass
         
     def random_can(self): 
         SDO_RX = 0x600
@@ -745,7 +751,7 @@ class MainWindow(QMainWindow):
     def adcMonitoringData(self, ChildWindow):
         ChildWindow.setObjectName("ADCChannels")
         ChildWindow.setWindowTitle("ADC Channels")
-        ChildWindow.resize(600, 600)  # w*h 350
+        ChildWindow.resize(400, 600)  # w*h 350
         MainLayout = QGridLayout()
         # Define a frame for that group
         plotframe = QFrame(ChildWindow)
@@ -793,16 +799,17 @@ class MainWindow(QMainWindow):
             self.trendingBox[i].stateChanged.connect(self.stateBox)
             if i < 16:
                 SecondGridLayout.addWidget(self.icon, i, 0)
-                SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
+                #SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
                 #SecondGridLayout.addWidget(self.trendingBotton[i], i, 2)
                 SecondGridLayout.addWidget(LabelChannel[i], i, 3)
-                #SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
             else:
                 SecondGridLayout.addWidget(self.icon, i - 16, 5)
-                SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
+                #SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
                 #SecondGridLayout.addWidget(self.trendingBotton[i], i-16, 7)
                 SecondGridLayout.addWidget(LabelChannel[i], i - 16, 8)
-                #SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
+                SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
+                
         SecondGroupBox.setLayout(SecondGridLayout) 
         Figure = self.compute_initial_figure()
         HBox = QHBoxLayout()
@@ -885,7 +892,7 @@ class MainWindow(QMainWindow):
         for i in np.arange(len(self.n_channels)):
             self.set_index(adc_index)
             self.set_subIndex(self.subIndexItems[i + 1])
-            self.send_sdo_can()
+            self.send_sdo_can(print_sdo=False)
             data_point = self.get_data_point()
             adc_updated = np.append(adc_updated, data_point)
             self.adc_converted = np.append(self.adc_converted,self.adc_conversion(adc_channels_reg[str(i + 3)], adc_updated[i]))
@@ -955,10 +962,11 @@ class MainWindow(QMainWindow):
         firstVLayout = QVBoxLayout()
         nodeLabel = QLabel("NodeId", self)
         nodeLabel.setText("NodeId ")
-        nodeItems = list(map(str, self.get_nodeIds()))
+        nodeItems = list(map(str, self.__nodeIds))
         nodeComboBox = QComboBox(self)
         for item in nodeItems: nodeComboBox.addItem(item)
-        nodeComboBox.activated[str].connect(self.set_nodeId)
+        def set_nodeId():
+            self.set_nodeId(nodeComboBox.currentText())
         icon = QLabel(self)
         pixmap = QPixmap(self.get_icon_dir())
         icon.setPixmap(pixmap.scaled(100, 100))
@@ -986,13 +994,13 @@ class MainWindow(QMainWindow):
         
         startButton = QPushButton("")
         startButton.setIcon(QIcon('graphics_Utils/icons/icon_start.png'))
+        startButton.clicked.connect(set_nodeId)
         startButton.clicked.connect(self.send_sdo_can)
         
         trendingButton = QPushButton("")
         trendingButton.setIcon(QIcon('graphics_Utils/icons/icon_trend.jpg'))
         trendingButton.setStatusTip('Data Trending')  # show when move mouse to the icon
         trendingButton.clicked.connect(self.trendWindow)
-        # trendingButton.clicked.connect(self.clicked)
         HLayout = QHBoxLayout()
         HLayout.addWidget(startButton)
         HLayout.addWidget(trendingButton)
@@ -1072,7 +1080,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(canMessage_action)
         #toolbar.addAction(settings_action)
         toolbar.addSeparator()
-        toolbar.addAction(canDumpMessage_action)
+        #toolbar.addAction(canDumpMessage_action)
         #toolbar.addAction(runDumpMessage_action)
         #toolbar.addAction(stopDumpMessage_action)
         toolbar.addAction(RandomDumpMessage_action)

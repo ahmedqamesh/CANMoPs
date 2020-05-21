@@ -23,7 +23,6 @@ from logging.handlers import RotatingFileHandler
 import verboselogs
 import coloredlogs as cl
 rootdir = os.path.dirname(os.path.abspath(__file__))
-
 try:
     import can
 except:
@@ -75,7 +74,7 @@ class ControlServer(object):
         self.__subIndex         =   conf["default_values"]["subIndex"]
         self.__cobid            =   conf["default_values"]["cobid"]
         self.__dlc              =   conf["default_values"]["dlc"]
-        self.__nodeIds          =   conf["CAN_settings"]["nodeIds"]
+        self.__nodeIds          =   conf["CAN_settings"]["nodeIdsList"]
         if interface == "Kvaser":
             self.__interface        =   conf['CAN_Interface']['Kvaser']['name']
             self.__channel          =   conf['CAN_Interface']['Kvaser']['channel']
@@ -123,6 +122,7 @@ class ControlServer(object):
         self.__pill2kill = Event()
         self.__lock = Lock()
         #self.__kvaserLock = Lock()
+        #self.confirmNodes()
         self.logger.success('... Done!')
         
     def __str__(self):
@@ -164,7 +164,6 @@ class ControlServer(object):
             else:
                 self.logger.info(f'Connection to node {nodeId} has been '
                                  f'verified.')
-        self.logger.success('... Done!')
         
     def set_channelConnection(self, interface = None):
         self.logger.notice('Setting the channel ...')
@@ -178,7 +177,7 @@ class ControlServer(object):
             self.__ch = analib.Channel(ipAddress=self.__ipAddress, port= self.__channel, baudrate=self.__bitrate)
         else:
             self.__ch = can.interface.Bus(bustype=interface, channel=self.__channel, bitrate=self.__bitrate)
-            
+                     
     def start_channelConnection(self, interface = None):
         self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
@@ -186,18 +185,20 @@ class ControlServer(object):
             self.__ch.setBusOutputControl(canlib.Driver.NORMAL)# New from tutorial
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
-            self.__canMsgThread = Thread(target=self.readCanMessages)
-            self.__canMsgThread.start()
-        else:
+        if interface == 'AnaGate':
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
                 self.__ch.openChannel() 
             if self.__ch.state != 'CONNECTED':
                 self.logger.notice('Restarting AnaGate CAN interface.')
                 self.__ch.restart()
-            self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
-            self.__ch.setCallback(self.__cbFunc)
-            
+            #self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
+            #self.__ch.setCallback(self.__cbFunc)
+        else:
+            pass
+        self.__canMsgThread = Thread(target=self.readCanMessages)
+        self.__canMsgThread.start()
+          
     def stop(self):
         """Close |CAN| channel and stop the |OPCUA| server
         Make sure that this is called so that the connection is closed in a
@@ -224,6 +225,7 @@ class ControlServer(object):
                 self.__ch.close()
             else:
                 self.__ch.shutdown()
+                
         self.__busOn = False
         self.logger.warning('Stopping the server.')
 
@@ -405,6 +407,7 @@ class ControlServer(object):
         self.logger.notice("Reading an object via |SDO|")
         SDO_TX =0x580  
         SDO_RX = 0x600
+        
         interface = self.get_interface()
         self.start_channelConnection(interface=interface)
         if nodeId is None or index is None or subindex is None:
@@ -486,9 +489,14 @@ class ControlServer(object):
             try:
                 self.__ch.send(msg)
             except can.CanError:
-                print("Message NOT sent")
+                self.hardwareConfig(self.__channel)
             
-            
+    def hardwareConfig(self, channel):
+        '''
+        Pass channel string (example 'can0') to configure OS level drivers and interface.
+        '''
+        self.logger.info('CAN hardware OS drivers and config for CAN0')
+        os.system(". "+rootdir+"/socketcan_install.sh")
             
     def readCanMessages(self):
         """Read incoming |CAN| messages and store them in the queue
@@ -498,7 +506,7 @@ class ControlServer(object):
         the :class:`~threading.Event` :attr:`pill2kill` and is therefore
         designed to be used as a :class:`~threading.Thread`.
         """
-        while not self.__pill2kill.is_set():
+        while not self.__pill2kill.is_set():            
             try:
                 if self.__interface == 'Kvaser':
                     frame = self.__ch.read()
@@ -509,6 +517,8 @@ class ControlServer(object):
                         raise canlib.CanNoMsg
                 if self.__interface == 'AnaGate':
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
+                    if (cobid == 0 and dlc == 0):
+                        raise analib.CanNoMsg
                 else:
                     readcan = self.__ch.recv(1.0)
                     cobid, data, dlc, flag, t = readcan.arbitration_id, readcan.data, readcan.dlc, readcan.is_extended_id, readcan.timestamp

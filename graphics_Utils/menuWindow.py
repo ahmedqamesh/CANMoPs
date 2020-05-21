@@ -57,6 +57,7 @@ class MenuBar(QWidget):
     def about(self):
         QMessageBox.about(self,"About",
         """CANMoPS is a graphical user interface GUI to read the channels of MOPS chip. The package can communicate with a CAN interface and talks CANopen with the connected Controllers. Currently only CAN interfaces from AnaGate (Ethernet) and Kvaser (USB) are supported.""")
+
 if __name__ == "__main__":
     pass
     

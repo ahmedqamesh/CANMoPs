@@ -2,6 +2,7 @@
 from __future__ import print_function
 import time
 import can
+import numpy as np
 bustype = ['socketcan',"pcan","ixxat","vector"]
 channel = 'can0'
 from analysis import controlServer
@@ -20,12 +21,29 @@ def test():
     Byte1, Byte2 = index.to_bytes(2, 'little')
     Byte3 = subindex = 0 
     #write CAN message [read dictionary request from master to node]
+    server.set_channelConnection(interface = interface)
     server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0,Byte1,Byte2,Byte3,0,0,0,0], flag=0, timeout=30)
     
     #Response from the node to master
     cobid, data, dlc, flag, t = server.readCanMessages()
     print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
     
+    print('Writing example CAN Expedited read message ...')    
+    #Example (1): get node Id
+    VendorId = server.sdoRead(NodeIds[0], 0x1000,0,3000)
+    print(f'VendorId: {VendorId:03X}')
+    #     #Example (2): Read channels 
+#     n_channels = np.arange(3,35)
+#     values = []
+#     for channel in n_channels: # Each i represents one channel
+#         c_index = 0x2400
+#         c_subindex = channel-2
+#         value = server.sdoRead(NodeIds[0], c_index,c_subindex,3000)
+#         values = np.append(values, value)
+#     n_channels = n_channels.tolist()
+#     for channel in n_channels:
+#         print("Channel %i = %0.3f "%(channel,values[n_channels.index(channel)]))
+
 def producer(id, N = None):
     """:param id: Spam the bus with messages including the data id."""
     bus = can.interface.Bus(bustype=bustype[0], channel=channel, bitrate=125000)
@@ -49,8 +67,6 @@ def producer(id, N = None):
         else:
             cobid, data, dlc, flag, t = message.arbitration_id, message.data, message.dlc, message.is_extended_id, message.timestamp
             print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
-    time.sleep(1)
-
 
 if __name__ == '__main__':   
     #producer(64, N = 2)

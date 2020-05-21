@@ -13,6 +13,7 @@ from can.interface import Bus
 def producer(id, N = None):
     """:param id: Spam the bus with messages including the data id."""
     bus = can.interface.Bus(bustype=bustype[0], channel=channel, bitrate=125000)
+    print(bus)
     for i in range(N):
         msg = can.Message(arbitration_id= 0x601, data=[id, i, 16, 1, 0, 0, 0, 0], is_extended_id= False) 
         print(msg)
