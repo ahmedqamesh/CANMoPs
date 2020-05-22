@@ -1,7 +1,13 @@
 #pip install python-can
 from __future__ import print_function
 import time
+import os
 import can
+rootdir = os.path.dirname(os.path.abspath(__file__))
+print(rootdir)
+print('CAN hardware OS drivers and config for CAN0')
+os.system(". " + rootdir[:-10] + "analysis/socketcan_install.sh")
+        
 bustype = ['socketcan',"pcan","ixxat","vector"]
 channel = 'can0'
 

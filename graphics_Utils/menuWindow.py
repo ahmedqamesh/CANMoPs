@@ -19,7 +19,7 @@ class MenuBar(QWidget):
         self.MainWindow = QMainWindow()
 
         
-    def _createMenu(self,mainwindow):
+    def create_menuBar(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
         self._fileMenu(menuBar,mainwindow)
@@ -48,7 +48,7 @@ class MenuBar(QWidget):
     
     # 4. Help menu
              
-    def _createStatusBar(self,mainwindow, msg ="Ready"):
+    def create_statusBar(self,mainwindow, msg ="Ready"):
         status = QStatusBar()
         status.showMessage(msg)
         mainwindow.setStatusBar(status)

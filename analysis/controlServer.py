@@ -28,7 +28,6 @@ try:
 except:
     print (colored("Warning: SocketCAN Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any SocketCAN drivers.", "green"))
 
-
 try:
     from canlib import canlib, Frame
     from canlib.canlib.exceptions import CanGeneralError
@@ -41,55 +40,61 @@ try:
     import analib
 except:
     print (colored("Warning: AnaGate Package is not installed.......", 'red'), colored("Please ignore the warning if you are not using any AnaGate commercial controllers.", "green"))
+
     
 class BusEmptyError(Exception):
     pass
 
 
 class ControlServer(object):
-    def __init__(self, parent=None, 
-                 config=None, interface= None,
-                 bitrate =None,
+
+    def __init__(self, parent=None,
+                 config=None, interface=None,
+                 bitrate=None,
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
-                 channel =None,ipAddress ="192.168.1.254",
-                 set_channel = False,
+                 channel=None, ipAddress="192.168.1.254",
+                 set_channel=False,
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
-        super(ControlServer, self).__init__() # super keyword to call its methods from a subclass:
+        super(ControlServer, self).__init__()  # super keyword to call its methods from a subclass:
         config_dir = "config/"
         self.__cnt = Counter()
         """:obj:`~logging.Logger`: Main logger for this class"""
         verboselogs.install()
         self.logger = logging.getLogger(__name__)
-        cl.install(fmt=logformat, level=console_loglevel, isatty=True,milliseconds=True)
-        
+        cl.install(fmt=logformat, level=console_loglevel, isatty=True, milliseconds=True)
         # Read configurations from a file
         if config is None:
-            conf = analysis_utils.open_yaml_file(file =config_dir + "main_cfg.yml",directory =rootdir[:-8])
-        self._index_items       =   conf["default_values"]["index_items"]
-        self.__interfaceItems   =   conf['default_values']["interface_items"]        
-        self.__bitrate_items    =   conf['default_values']['bitrate_items']
-        self.__bytes            =   conf["default_values"]["bytes"]
-        self.__subIndex         =   conf["default_values"]["subIndex"]
-        self.__cobid            =   conf["default_values"]["cobid"]
-        self.__dlc              =   conf["default_values"]["dlc"]
-        self.__nodeIds          =   conf["CAN_settings"]["nodeIdsList"]
-        if interface == "Kvaser":
-            self.__interface        =   conf['CAN_Interface']['Kvaser']['name']
-            self.__channel          =   conf['CAN_Interface']['Kvaser']['channel']
-            self.__ipAddress        =   conf['CAN_Interface']['Kvaser']['ipAddress']
-            self.__bitrate          =   int(conf['CAN_Interface']['Kvaser']['bitrate'])
+            conf = analysis_utils.open_yaml_file(file=config_dir + "main_cfg.yml", directory=rootdir[:-8])
+        self._index_items = conf["default_values"]["index_items"]
+        self.__interfaceItems = conf['default_values']["interface_items"]        
+        self.__bitrate_items = conf['default_values']['bitrate_items']
+        self.__bytes = conf["default_values"]["bytes"]
+        self.__subIndex = conf["default_values"]["subIndex"]
+        self.__cobid = conf["default_values"]["cobid"]
+        self.__dlc = conf["default_values"]["dlc"]
+        self.__nodeIds = conf["CAN_settings"]["nodeIdsList"]
         
-        if interface == "AnaGate":  
-            self.__interface        =   conf['CAN_Interface']['AnaGate']['name']
-            self.__channel          =   conf['CAN_Interface']['AnaGate']['channel']
-            self.__ipAddress        =   conf['CAN_Interface']['AnaGate']['ipAddress']
-            self.__bitrate          =   int(conf['CAN_Interface']['AnaGate']['bitrate'])
+        if interface == "Kvaser":
+            self.__interface = conf['CAN_Interface']['Kvaser']['name']
+            self.__channel = conf['CAN_Interface']['Kvaser']['channel']
+            self.__ipAddress = conf['CAN_Interface']['Kvaser']['ipAddress']
+            self.__bitrate = int(conf['CAN_Interface']['Kvaser']['bitrate'])
+        
+        elif interface == "AnaGate":  
+            self.__interface = conf['CAN_Interface']['AnaGate']['name']
+            self.__channel = conf['CAN_Interface']['AnaGate']['channel']
+            self.__ipAddress = conf['CAN_Interface']['AnaGate']['ipAddress']
+            self.__bitrate = int(conf['CAN_Interface']['AnaGate']['bitrate'])
+        
+        elif interface == "socketcan": 
+            self.__interface = conf['CAN_Interface']['can']['name']
+            self.__bitrate = int(conf['CAN_Interface']['can']['bitrate'])
+            self.__channel = conf['CAN_Interface']['can']['channel']           
         else:
-            self.__interface        =   interface
-            self.__bitrate          =   int(conf['CAN_Interface']['can']['bitrate'])
-            self.__channel          =   conf['CAN_Interface']['can']['channel']           
+            self.__interface = interface
+            
         self.logger.notice('... Loading all the configurations!')
          # Initialize default arguments
         if bitrate is None:
@@ -101,7 +106,7 @@ class ControlServer(object):
         self.__busOn = False  
         """:obj:`int` : Internal attribute for the channel index"""
         if channel is None:
-            channel = self.__channel
+            channel = self.__channel[0]
         """:obj:`int` : Internal attribute for the bit rate"""
         self.__bitrate = bitrate
        
@@ -113,7 +118,7 @@ class ControlServer(object):
 
         """Internal attribute for the |CAN| channel"""
         if set_channel:
-            self.set_channelConnection(interface = self.__interface)
+            self.set_channelConnection(interface=self.__interface)
             self.logger.success(str(self))
                         
         """Internal attribute for the |CAN| channel"""
@@ -121,8 +126,8 @@ class ControlServer(object):
         self.__canMsgQueue = deque([], 2)
         self.__pill2kill = Event()
         self.__lock = Lock()
-        #self.__kvaserLock = Lock()
-        #self.confirmNodes()
+        # self.__kvaserLock = Lock()
+        # self.confirmNodes()
         self.logger.success('... Done!')
         
     def __str__(self):
@@ -135,7 +140,7 @@ class ControlServer(object):
                 chdata_serial = chdata.card_serial_no
                 return f'Using {chdataname}, EAN: {chdata_EAN}, Serial No.:{chdata_serial}'
         if self.__interface == 'AnaGate':
-            ret = analib.wrapper.dllInfo()# DLL version
+            ret = analib.wrapper.dllInfo()  # DLL version
             return f'{self.__ch}, Bitrate:{self.__bitrate}'
         else:
             return f'{self.__ch.channel_info}, Bitrate:{self.__bitrate}'
@@ -165,24 +170,24 @@ class ControlServer(object):
                 self.logger.info(f'Connection to node {nodeId} has been '
                                  f'verified.')
         
-    def set_channelConnection(self, interface = None):
+    def set_channelConnection(self, interface=None):
         self.logger.notice('Setting the channel ...')
         if interface == 'Kvaser':
-            self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
+            self.__ch = canlib.openChannel(self.__channel[0], canlib.canOPEN_ACCEPT_VIRTUAL)
             self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
         if interface == 'AnaGate':
-            self.__ch = analib.Channel(ipAddress=self.__ipAddress, port= self.__channel, baudrate=self.__bitrate)
+            self.__ch = analib.Channel(ipAddress=self.__ipAddress, port=self.__channel[0], baudrate=self.__bitrate)
         else:
-            self.__ch = can.interface.Bus(bustype=interface, channel=self.__channel, bitrate=self.__bitrate)
+            self.__ch = can.interface.Bus(bustype=interface, channel=self.__channel[0], bitrate=self.__bitrate)
                      
-    def start_channelConnection(self, interface = None):
+    def start_channelConnection(self, interface=None):
         self.logger.notice('Starting CAN Connection ...')
         if interface == 'Kvaser':
-            self.__ch = canlib.openChannel(self.__channel, canlib.canOPEN_ACCEPT_VIRTUAL)
-            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)# New from tutorial
+            self.__ch = canlib.openChannel(self.__channel[0], canlib.canOPEN_ACCEPT_VIRTUAL)
+            self.__ch.setBusOutputControl(canlib.Driver.NORMAL)  # New from tutorial
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
         if interface == 'AnaGate':
@@ -192,8 +197,8 @@ class ControlServer(object):
             if self.__ch.state != 'CONNECTED':
                 self.logger.notice('Restarting AnaGate CAN interface.')
                 self.__ch.restart()
-            #self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
-            #self.__ch.setCallback(self.__cbFunc)
+            # self.__cbFunc = analib.wrapper.dll.CBFUNC(self._anagateCbFunc())
+            # self.__ch.setCallback(self.__cbFunc)
         else:
             pass
         self.__canMsgThread = Thread(target=self.readCanMessages)
@@ -228,37 +233,35 @@ class ControlServer(object):
                 
         self.__busOn = False
         self.logger.warning('Stopping the server.')
-
         
-    #Setter and getter functions
-    def set_subIndex(self,x):
+    # Setter and getter functions
+    def set_subIndex(self, x):
         self.__subIndex = x
                 
     def set_cobid(self, x):
         self.__cobid = x
     
-    def set_dlc(self,x):
+    def set_dlc(self, x):
         self.__dlc = x
     
-    def set_bytes(self,x):
+    def set_bytes(self, x):
         self.__bytes = x
         
     def set_interface(self, x):
-        self.logger.success('Setting the interface to %s' %x)
+        self.logger.success('Setting the interface to %s' % x)
         self.__interface = x
         self.__str__()
-        
                 
-    def set_nodeIds(self,x):
-        self.__nodeIds =x
+    def set_nodeIds(self, x):
+        self.__nodeIds = x
     
-    def set_channelNumber(self,x):
+    def set_channelNumber(self, x):
         self.__channel = x
     
-    def set_ipAddress(self,x):
+    def set_ipAddress(self, x):
         self.__ipAddress = x
         
-    def set_bitrate(self,bitrate):
+    def set_bitrate(self, bitrate):
         if self.__interface == 'Kvaser':
             self.stop()
             self.__bitrate = bitrate
@@ -272,7 +275,6 @@ class ControlServer(object):
     
     def get_nodeIds(self):
         return self.__nodeIds
-
     
     def get_bitrate(self):
         return self.__bitrate
@@ -283,6 +285,7 @@ class ControlServer(object):
         if self.__interface == 'Kvaser':
             raise AttributeError('You are using a Kvaser CAN interface!')
         return self.__ipAddress
+
     def get_interface(self):
         """:obj:`str` : Vendor of the CAN interface. Possible values are
         ``'Kvaser'`` and ``'AnaGate'``."""
@@ -298,7 +301,7 @@ class ControlServer(object):
     def get_bitrate_items(self):
             return self.__bitrate_items
            
-    def get_channelState(self,channel):
+    def get_channelState(self, channel):
         return channel.state
 
     def get_subIndex(self):
@@ -318,7 +321,6 @@ class ControlServer(object):
         """:class:`~threading.Lock` : Lock object for accessing the incoming
         message queue :attr:`canMsgQueue`"""
         return self.__lock
-
 
     @property
     def canMsgQueue(self):
@@ -355,11 +357,12 @@ class ControlServer(object):
         method :meth:`readCanMessages`"""
         return self.__pill2kill
     
-    #@property
+    # @property
     def channel(self):
         """Currently used |CAN| channel. The actual class depends on the used
         |CAN| interface."""
         return self.__ch
+
 #     
     @property
     def bitRate(self):
@@ -379,7 +382,7 @@ class ControlServer(object):
         else:
             self.__ch.baudrate = bitrate     
 
-    def sdoRead(self, nodeId, index, subindex, timeout=100,MAX_DATABYTES=8):
+    def sdoRead(self, nodeId, index, subindex, timeout=100, MAX_DATABYTES=8):
         """Read an object via |SDO|
     
         Currently expedited and segmented transfer is supported by this method.
@@ -405,7 +408,7 @@ class ControlServer(object):
             In case of errors
         """
         self.logger.notice("Reading an object via |SDO|")
-        SDO_TX =0x580  
+        SDO_TX = 0x580  
         SDO_RX = 0x600
         
         interface = self.get_interface()
@@ -478,25 +481,25 @@ class ControlServer(object):
         if self.__interface == 'Kvaser':
             if timeout is None:
                 timeout = 0xFFFFFFFF
-            frame = Frame(id_ = cobid, data = msg)#  from tutorial
-            self.__ch.writeWait(frame,timeout)
+            frame = Frame(id_=cobid, data=msg)  #  from tutorial
+            self.__ch.writeWait(frame, timeout)
         if self.__interface == 'AnaGate':
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
             self.__ch.write(cobid, msg, flag)
         else:
-            msg = can.Message(arbitration_id= cobid, data=msg, is_extended_id= False)
+            msg = can.Message(arbitration_id=cobid, data=msg, is_extended_id=False)
             try:
                 self.__ch.send(msg)
             except can.CanError:
-                self.hardwareConfig(self.__channel)
+                self.hardwareConfig(self.__channel[0])
             
     def hardwareConfig(self, channel):
         '''
         Pass channel string (example 'can0') to configure OS level drivers and interface.
         '''
         self.logger.info('CAN hardware OS drivers and config for CAN0')
-        os.system(". "+rootdir+"/socketcan_install.sh")
+        os.system(". " + rootdir + "/socketcan_install.sh")
             
     def readCanMessages(self):
         """Read incoming |CAN| messages and store them in the queue
@@ -524,12 +527,12 @@ class ControlServer(object):
                     cobid, data, dlc, flag, t = readcan.arbitration_id, readcan.data, readcan.dlc, readcan.is_extended_id, readcan.timestamp
                 with self.__lock:
                      self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-                self.dumpMessage(cobid, data, dlc, flag,t)
+                self.dumpMessage(cobid, data, dlc, flag, t)
                 return cobid, data, dlc, flag, t
-            except: #(canlib.CanNoMsg, analib.CanNoMsg):
+            except:  # (canlib.CanNoMsg, analib.CanNoMsg):
                 pass
         
-    #The following functions are to read the can messages
+    # The following functions are to read the can messages
     def _anagateCbFunc(self):
         """Wraps the callback function for AnaGate |CAN| interfaces. This is
         neccessary in order to have access to the instance attributes.
@@ -542,6 +545,7 @@ class ControlServer(object):
         cbFunc
             Function pointer to the callback function
         """
+
         def cbFunc(cobid, data, dlc, flag, handle):
             """Callback function.
 
@@ -569,7 +573,7 @@ class ControlServer(object):
             t = time.time()
             with self.__lock:
                 self.__canMsgQueue.appendleft((cobid, data, dlc, flag, t))
-            self.dumpMessage(cobid, data, dlc, flag,t)
+            self.dumpMessage(cobid, data, dlc, flag, t)
         
         return cbFunc
     
@@ -602,6 +606,7 @@ class ControlServer(object):
             if self.__interface == 'Kvaser':
                 self.logger.info(coc.MSGHEADER)
             self.logger.info(msgstr)
+
                                                   
 if __name__ == "__main__":
     pass
