@@ -126,8 +126,8 @@ class ControlServer(object):
         self.__canMsgQueue = deque([], 2)
         self.__pill2kill = Event()
         self.__lock = Lock()
-        # self.__kvaserLock = Lock()
-        # self.confirmNodes()
+        self.__kvaserLock = Lock()
+        self.confirmNodes()
         self.logger.success('... Done!')
         
     def __str__(self):
@@ -178,7 +178,7 @@ class ControlServer(object):
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
             self.__canMsgThread = Thread(target=self.readCanMessages)
-        if interface == 'AnaGate':
+        elif interface == 'AnaGate':
             self.__ch = analib.Channel(ipAddress=self.__ipAddress, port=self.__channel[0], baudrate=self.__bitrate)
         else:
             self.__ch = can.interface.Bus(bustype=interface, channel=self.__channel[0], bitrate=self.__bitrate)
@@ -190,7 +190,7 @@ class ControlServer(object):
             self.__ch.setBusOutputControl(canlib.Driver.NORMAL)  # New from tutorial
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
-        if interface == 'AnaGate':
+        elif interface == 'AnaGate':
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
                 self.__ch.openChannel() 
@@ -226,7 +226,7 @@ class ControlServer(object):
                 self.logger.warning('Going in \'Bus Off\' state.')
                 self.__ch.busOff()
                 self.__ch.close()
-            if self.__interface == 'AnaGate':    
+            elif self.__interface == 'AnaGate':    
                 self.__ch.close()
             else:
                 self.__ch.shutdown()
@@ -483,7 +483,7 @@ class ControlServer(object):
                 timeout = 0xFFFFFFFF
             frame = Frame(id_=cobid, data=msg)  #  from tutorial
             self.__ch.writeWait(frame, timeout)
-        if self.__interface == 'AnaGate':
+        elif self.__interface == 'AnaGate':
             if not self.__ch.deviceOpen:
                 self.logger.notice('Reopening AnaGate CAN interface')
             self.__ch.write(cobid, msg, flag)
@@ -518,7 +518,7 @@ class ControlServer(object):
                                                  frame.timestamp)
                     if frame is None or (cobid == 0 and dlc == 0):
                         raise canlib.CanNoMsg
-                if self.__interface == 'AnaGate':
+                elif self.__interface == 'AnaGate':
                     cobid, data, dlc, flag, t = self.__ch.getMessage()
                     if (cobid == 0 and dlc == 0):
                         raise analib.CanNoMsg

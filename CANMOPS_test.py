@@ -6,7 +6,6 @@ import time
 import logging
 import numpy as np
 from analysis import controlServer
-rootdir = os.path.dirname(os.path.abspath(__file__))
 def test():
     # Define parameters
     NodeIds = server.get_nodeIds()
@@ -49,7 +48,7 @@ def test():
 
 if __name__=='__main__':
     
-    server = controlServer.ControlServer(interface = "AnaGate", set_channel =True)
-    #server = controlServer.ControlServer(interface = "socketcan", set_channel =True)
+    #server = controlServer.ControlServer(interface = "AnaGate", set_channel =True)
+    server = controlServer.ControlServer(interface = "socketcan", set_channel =True)
     #server = controlServer.ControlServer(interface = "Kvaser", set_channel =True)
     test()

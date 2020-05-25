@@ -2,7 +2,8 @@
 # variables
 BITRATE=125000
 CHANNEL="can0"
-
+#Install python-can
+#pip install python-can
 
 # SocketCAN script
 echo "CAN hardware OS drivers and config for" $CHANNEL

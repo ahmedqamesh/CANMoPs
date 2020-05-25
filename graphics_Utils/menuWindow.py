@@ -10,15 +10,15 @@ from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
 from graphics_Utils import mainWindow
 import yaml
-cs = False
-wwo = False
 class MenuBar(QWidget):  
     
     def __init__(self,parent=mainWindow):
         super(MenuBar,self).__init__(parent)
-        self.MainWindow = QMainWindow()
+        self.MainWindow = mainWindow.MainWindow()
 
-        
+    def stop(self):
+        return self.MainWindow.stop_server()
+           
     def create_menuBar(self,mainwindow):
         menuBar = mainwindow.menuBar()
         menuBar.setNativeMenuBar(False) #only for MacOS
@@ -32,7 +32,9 @@ class MenuBar(QWidget):
         exit_action = QAction(QIcon('graphics_Utils/icons/icon_exit.png'), '&Exit', mainwindow)
         exit_action.setShortcut('Ctrl+Q')
         exit_action.setStatusTip('Exit program')
+        #exit_action.triggered.connect(self.stop)
         exit_action.triggered.connect(qApp.quit)
+        
 
         #fileMenu.addSeparator()
         fileMenu.addAction(exit_action)
