@@ -18,13 +18,13 @@ from IPython import display
 import matplotlib as mpl
 from matplotlib.figure import Figure
 from analysis import analysis_utils
-from graphics_Utils import mainWindow
+from graphics_utils import mainWindow
 from PyQt5 import QtWidgets, QtCore, uic
 from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
 import sys  # We need sys so that we can pass argv to QApplication
 import os
-from graphics_Utils import dataMonitoring
+from graphics_utils import dataMonitoring
 
 bytearray(b'\x00P\x80\xfe\x01(\x02\x00')
 stra = str(bytearray(b'\x00P\x80\xfe\x01(\x02\x00'))
