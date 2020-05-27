@@ -1,7 +1,7 @@
 Application:
     app_name             :   'CAN-MoPS'
     app_version          :   "v1.0"
-    app_icon_dir         :   "graphics_Utils/icons/icon_mops.png"   
+    app_icon_dir         :   "graphics_utils/icons/icon_mops.png"   
 
 CAN_settings:
         nodeIdsList: [1]

@@ -88,4 +88,21 @@ def get_subindex_yaml(dictionary = None, index =None):
 def get_project_root() -> Path:
     """Returns project root folder."""
     return Path(__file__).parent.parent
-
+def save_adc_date(directory = None,channel = None):
+    File = tb.open_file(directory + "ch_"+channel+ ".h5", 'w')
+    description = np.zeros((1,), dtype=np.dtype([("TimeStamp", "f8"), ("Channel", "f8"), ("Id", "f8"), ("Flg", "f8"), ("DLC", "f8"), ("ADCChannel", "f8"), ("ADCData", "f8"),("ADCDataConverted", "f8")])).dtype
+    table = File.create_table(File.root, name='ADC_results', description=description)
+    table.flush()
+    row = table.row
+    for i in np.arange(length_v):
+        row["TimeStamp"] = voltage_array[i]
+        row["Channel"] = mean
+        row["Id"] = std
+        row["DLC"] = voltage_array[i]
+        row["ADCChannel"] = mean
+        row["ADCData"] = std
+        row["ADCDataConverted"] = std
+        row.append()
+    File.create_array(File.root, 'current_array', current_array, "current_array")
+    File.close()
+    logging.info("Start creating table")     

@@ -25,6 +25,8 @@ from graphics_utils import dataMonitoring , logWindow, childWindow, menuWindow
 from analysis import analysis_utils , controlServer
 import binascii
 from tqdm import tqdm
+import tables as tb
+import csv
 # Third party modules
 import coloredlogs as cl
 import verboselogs
@@ -158,8 +160,6 @@ class MainWindow(QMainWindow):
         
         self.interfaceComboBox.setStatusTip('Select the connected interface')
         self.connectButton = QPushButton("")
-        self.connectButton.setIcon(QIcon('graphics_utils/icons/icon_disconnect.jpg'))
-        
         icon = QIcon()
         icon.addPixmap(QPixmap('graphics_utils/icons/icon_connect.jpg'), QIcon.Normal, QIcon.On)
         icon.addPixmap(QPixmap('graphics_utils/icons/icon_disconnect.jpg'), QIcon.Normal, QIcon.Off)
@@ -331,172 +331,8 @@ class MainWindow(QMainWindow):
  
     '''
     Define all child windows
-    '''
-
-    def canSettingsChildWindow(self, ChildWindow):
-        ChildWindow.setObjectName("CANSettings")
-        ChildWindow.setWindowTitle("CAN Settings")
-        ChildWindow.resize(310, 600)  # w*h
-        mainLayout = QGridLayout()
-        
-        # Define a frame for that group
-        plotframe = QFrame(ChildWindow)
-        plotframe.setLineWidth(0.6)
-        ChildWindow.setCentralWidget(plotframe)
-        
-        # Define First Group
-        FirstGroupBox = QGroupBox("Bus Statistics")
-        FirstGridLayout = QGridLayout()
-        
-        clear_button = QPushButton("Clear")
-        clear_button.clicked.connect(ChildWindow.close)
-        
-        FirstGridLayout.addWidget(clear_button, 0, 0)
-        FirstGroupBox.setLayout(FirstGridLayout)
-        
-        # Define the second group
-        SecondGroupBox = QGroupBox("Bus Configuration")
-        SecondGridLayout = QGridLayout()        
-        # comboBox and label for channel
-        chLabel = QLabel("CAN Channel:", ChildWindow)
-        chLabel.setText("CAN Channel:")
-        controllerLayout = QHBoxLayout()
-        __interfaceItems = self.__interfaceItems
-        interfaceComboBox = QComboBox(ChildWindow)
-        for item in __interfaceItems: interfaceComboBox.addItem(item)
-        interfaceComboBox.activated[str].connect(self.set_interface)
-        controllerLayout.addWidget(interfaceComboBox)
-        
-        # Another group will be here for Bus parameters
-        self.BusParametersGroupBox()
-        modeLabel = QLabel("CAN Mode:", ChildWindow)
-        modeLabel.setText("CAN Mode:")
-        modeitems = ["CAN"]
-        modeComboBox = QComboBox(ChildWindow)
-        for item in modeitems: modeComboBox.addItem(item)
-        # modeComboBox.activated[str].connect(self.clicked)
-
-        # FirstButton
-        clear_button = QPushButton("Clear")
-        clear_button.clicked.connect(ChildWindow.close)
-
-        HGridLayout = QGridLayout()  
-        set_button = QPushButton("Set in all")
-        set_button.setIcon(QIcon('graphics_utils/icons/icon_true.png'))
-        set_button.clicked.connect(self.set_all)
-
-        setLabel = QLabel("Set same bit rate in all CAN controllers", ChildWindow)
-        setLabel.setText("Set same bit rate in all CAN controllers")
-        
-        HGridLayout.addWidget(set_button, 0, 0)
-        HGridLayout.addWidget(setLabel, 0, 1)
-        
-        SecondGroupBox.setLayout(SecondGridLayout)
-        SecondGridLayout.addWidget(chLabel, 0, 0)
-        SecondGridLayout.addLayout(controllerLayout, 1, 0)
-        SecondGridLayout.addWidget(modeLabel, 2, 0)
-        SecondGridLayout.addWidget(modeComboBox, 3, 0)
-        
-        def _interfaceParameters():
-            SecondGridLayout.removeWidget(self.SubSecondGroupBox)
-            self.SubSecondGroupBox.deleteLater()
-            self.SubSecondGroupBox = None
-            interface = self.get_interface()
-            self.BusParametersGroupBox(ChildWindow=ChildWindow , interface=interface)
-            SecondGridLayout.addWidget(self.SubSecondGroupBox, 4, 0)        
-
-        SecondGridLayout.addLayout(HGridLayout, 5, 0)
-        interfaceComboBox.activated[str].connect(_interfaceParameters)
-        # Define Third Group
-        ThirdGroupBox = QGroupBox("Bus Status")
-        ThirdGridLayout = QGridLayout()
-        
-        go_button = QPushButton("Go On Bus")
-        go_button.setIcon(QIcon('graphics_utils/icons/icon_reset.png'))
-        go_button.clicked.connect(ChildWindow.close)
-        
-        ThirdGridLayout.addWidget(go_button, 0, 0)
-        ThirdGroupBox.setLayout(ThirdGridLayout)
-        mainLayout.addWidget(FirstGroupBox, 0, 0)
-        mainLayout.addWidget(SecondGroupBox, 1, 0)
-        mainLayout.addWidget(ThirdGroupBox, 2, 0)
-        plotframe.setLayout(mainLayout) 
-        self.MenuBar.create_statusBar(ChildWindow)
-        QtCore.QMetaObject.connectSlotsByName(ChildWindow)        
-
-    def BusParametersGroupBox(self, ChildWindow=None, interface="Others"):
-        # Define subGroup
-        self.SubSecondGroupBox = QGroupBox("Bus Parameters")
-        SubSecondGridLayout = QGridLayout()
-        firstLabel = QLabel("firstLabel", ChildWindow)
-        secondLabel = QLabel("secondLabel", ChildWindow)
-        thirdLabel = QLabel("thirdLabel", ChildWindow)
-        firstComboBox = QComboBox(ChildWindow)
-        if (interface == "Kvaser"):
-            firstLabel.setText("")
-            firstItems = self.get_bitrate_items() 
-            for item in firstItems: firstComboBox.addItem(item)
-
-            firstComboBox.activated[str].connect(self.clicked)
-            secondLabel.setText("SJW:")
-            secondItems = ["1", "2", "3", "4"]
-            secondComboBox = QComboBox(ChildWindow)
-            for item in secondItems: secondComboBox.addItem(item)
-            secondComboBox.activated[str].connect(self.clicked)
-            thirdLabel.setText("Bit Timing:")
-            thirdItems = self.get_bitrate_items()
-            thirdComboBox = QComboBox(ChildWindow)
-            for item in thirdItems: thirdComboBox.addItem(item)
-            thirdComboBox.activated[str].connect(self.set_bitrate)
-            
-        if (interface == "AnaGate"):
-            firstLabel.setText("IP address")
-            ipAddress = self.get_ipAddress()
-            self.firsttextbox = QLineEdit(ipAddress, ChildWindow)
-            self.firsttextboxvalue = self.firsttextbox.text()
-
-            secondLabel.setText("SJW:")
-            secondItems = ["1", "2", "3", "4"]
-            secondComboBox = QComboBox(ChildWindow)
-            for item in secondItems: secondComboBox.addItem(item)
-            secondComboBox.activated[str].connect(self.clicked)
-            
-            thirdLabel.setText("Bit Timing:")
-            thirdItems = self.get_bitrate_items()
-            thirdComboBox = QComboBox(ChildWindow)
-            for item in thirdItems: thirdComboBox.addItem(item)
-            thirdComboBox.activated[str].connect(self.set_bitrate)
-            SubSecondGridLayout.addWidget(self.firsttextbox, 0, 1)
-            
-        if (interface == "Others"):        
-            firstLabel.setText("Speed:")
-            firstItems = [""]
-            firstComboBox = QComboBox(ChildWindow)
-            for item in firstItems: firstComboBox.addItem(item)
-            # firstComboBox.activated[str].connect(self.clicked)
-            secondLabel.setText("")
-            seconditems = [""]
-            secondComboBox = QComboBox(ChildWindow)
-            for item in seconditems: secondComboBox.addItem(item)
-            secondComboBox.activated[str].connect(self.clicked)
-            thirdLabel.setText("")
-            thirdItems = [""]
-            thirdComboBox = QComboBox(ChildWindow)
-            thirdComboBox.activated[str].connect(self.set_bitrate)
-            for item in thirdItems: thirdComboBox.addItem(item)
-            SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
-        else:
-            pass   
-        SubSecondGridLayout.addWidget(firstLabel, 0, 0)
-        SubSecondGridLayout.addWidget(secondLabel, 1, 0)
-        SubSecondGridLayout.addWidget(secondComboBox, 1, 1)
-        SubSecondGridLayout.addWidget(thirdLabel, 2, 0)
-        SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
-        self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
-        
+    '''        
     def canMessageChildWindow(self, ChildWindow):
-        
-        
         ChildWindow.setObjectName("CANMessage")
         ChildWindow.setWindowTitle("CAN Message")
         ChildWindow.resize(310, 600)  # w*h
@@ -774,19 +610,182 @@ class MainWindow(QMainWindow):
         self.graphWidget.setXRange(0, 100, padding=0)
         # self.graphWidget.setYRange(00, 55, padding=0)
         return self.graphWidget
-    
+
+
+    def canSettingsChildWindow(self, ChildWindow):
+        ChildWindow.setObjectName("CANSettings")
+        ChildWindow.setWindowTitle("CAN Settings")
+        ChildWindow.resize(310, 600)  # w*h
+        mainLayout = QGridLayout()
+        
+        # Define a frame for that group
+        plotframe = QFrame(ChildWindow)
+        plotframe.setLineWidth(0.6)
+        ChildWindow.setCentralWidget(plotframe)
+        
+        # Define First Group
+        FirstGroupBox = QGroupBox("Bus Statistics")
+        FirstGridLayout = QGridLayout()
+        
+        clear_button = QPushButton("Clear")
+        clear_button.clicked.connect(ChildWindow.close)
+        
+        FirstGridLayout.addWidget(clear_button, 0, 0)
+        FirstGroupBox.setLayout(FirstGridLayout)
+        
+        # Define the second group
+        SecondGroupBox = QGroupBox("Bus Configuration")
+        SecondGridLayout = QGridLayout()        
+        # comboBox and label for channel
+        chLabel = QLabel("CAN Channel:", ChildWindow)
+        chLabel.setText("CAN Channel:")
+        controllerLayout = QHBoxLayout()
+        __interfaceItems = self.__interfaceItems
+        interfaceComboBox = QComboBox(ChildWindow)
+        for item in __interfaceItems: interfaceComboBox.addItem(item)
+        interfaceComboBox.activated[str].connect(self.set_interface)
+        controllerLayout.addWidget(interfaceComboBox)
+        
+        # Another group will be here for Bus parameters
+        self.BusParametersGroupBox()
+        modeLabel = QLabel("CAN Mode:", ChildWindow)
+        modeLabel.setText("CAN Mode:")
+        modeitems = ["CAN"]
+        modeComboBox = QComboBox(ChildWindow)
+        for item in modeitems: modeComboBox.addItem(item)
+        # modeComboBox.activated[str].connect(self.clicked)
+
+        # FirstButton
+        clear_button = QPushButton("Clear")
+        clear_button.clicked.connect(ChildWindow.close)
+
+        HGridLayout = QGridLayout()  
+        set_button = QPushButton("Set in all")
+        set_button.setIcon(QIcon('graphics_utils/icons/icon_true.png'))
+        set_button.clicked.connect(self.set_all)
+
+        setLabel = QLabel("Set same bit rate in all CAN controllers", ChildWindow)
+        setLabel.setText("Set same bit rate in all CAN controllers")
+        
+        HGridLayout.addWidget(set_button, 0, 0)
+        HGridLayout.addWidget(setLabel, 0, 1)
+        
+        SecondGroupBox.setLayout(SecondGridLayout)
+        SecondGridLayout.addWidget(chLabel, 0, 0)
+        SecondGridLayout.addLayout(controllerLayout, 1, 0)
+        SecondGridLayout.addWidget(modeLabel, 2, 0)
+        SecondGridLayout.addWidget(modeComboBox, 3, 0)
+        
+        def _interfaceParameters():
+            SecondGridLayout.removeWidget(self.SubSecondGroupBox)
+            self.SubSecondGroupBox.deleteLater()
+            self.SubSecondGroupBox = None
+            interface = self.get_interface()
+            self.BusParametersGroupBox(ChildWindow=ChildWindow , interface=interface)
+            SecondGridLayout.addWidget(self.SubSecondGroupBox, 4, 0)        
+
+        SecondGridLayout.addLayout(HGridLayout, 5, 0)
+        interfaceComboBox.activated[str].connect(_interfaceParameters)
+        # Define Third Group
+        ThirdGroupBox = QGroupBox("Bus Status")
+        ThirdGridLayout = QGridLayout()
+        
+        go_button = QPushButton("Go On Bus")
+        go_button.setIcon(QIcon('graphics_utils/icons/icon_reset.png'))
+        go_button.clicked.connect(ChildWindow.close)
+        
+        ThirdGridLayout.addWidget(go_button, 0, 0)
+        ThirdGroupBox.setLayout(ThirdGridLayout)
+        mainLayout.addWidget(FirstGroupBox, 0, 0)
+        mainLayout.addWidget(SecondGroupBox, 1, 0)
+        mainLayout.addWidget(ThirdGroupBox, 2, 0)
+        plotframe.setLayout(mainLayout) 
+        self.MenuBar.create_statusBar(ChildWindow)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)        
+
+    def BusParametersGroupBox(self, ChildWindow=None, interface="Others"):
+        # Define subGroup
+        self.SubSecondGroupBox = QGroupBox("Bus Parameters")
+        SubSecondGridLayout = QGridLayout()
+        firstLabel = QLabel("firstLabel", ChildWindow)
+        secondLabel = QLabel("secondLabel", ChildWindow)
+        thirdLabel = QLabel("thirdLabel", ChildWindow)
+        firstComboBox = QComboBox(ChildWindow)
+        if (interface == "Kvaser"):
+            firstLabel.setText("")
+            firstItems = self.get_bitrate_items() 
+            for item in firstItems: firstComboBox.addItem(item)
+
+            firstComboBox.activated[str].connect(self.clicked)
+            secondLabel.setText("SJW:")
+            secondItems = ["1", "2", "3", "4"]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in secondItems: secondComboBox.addItem(item)
+            secondComboBox.activated[str].connect(self.clicked)
+            thirdLabel.setText("Bit Timing:")
+            thirdItems = self.get_bitrate_items()
+            thirdComboBox = QComboBox(ChildWindow)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            
+        if (interface == "AnaGate"):
+            firstLabel.setText("IP address")
+            ipAddress = self.get_ipAddress()
+            self.firsttextbox = QLineEdit(ipAddress, ChildWindow)
+            self.firsttextboxvalue = self.firsttextbox.text()
+
+            secondLabel.setText("SJW:")
+            secondItems = ["1", "2", "3", "4"]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in secondItems: secondComboBox.addItem(item)
+            secondComboBox.activated[str].connect(self.clicked)
+            
+            thirdLabel.setText("Bit Timing:")
+            thirdItems = self.get_bitrate_items()
+            thirdComboBox = QComboBox(ChildWindow)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            SubSecondGridLayout.addWidget(self.firsttextbox, 0, 1)
+            
+        if (interface == "Others"):        
+            firstLabel.setText("Speed:")
+            firstItems = [""]
+            firstComboBox = QComboBox(ChildWindow)
+            for item in firstItems: firstComboBox.addItem(item)
+            # firstComboBox.activated[str].connect(self.clicked)
+            secondLabel.setText("")
+            seconditems = [""]
+            secondComboBox = QComboBox(ChildWindow)
+            for item in seconditems: secondComboBox.addItem(item)
+            secondComboBox.activated[str].connect(self.clicked)
+            thirdLabel.setText("")
+            thirdItems = [""]
+            thirdComboBox = QComboBox(ChildWindow)
+            thirdComboBox.activated[str].connect(self.set_bitrate)
+            for item in thirdItems: thirdComboBox.addItem(item)
+            SubSecondGridLayout.addWidget(firstComboBox, 0, 1)
+        else:
+            pass   
+        SubSecondGridLayout.addWidget(firstLabel, 0, 0)
+        SubSecondGridLayout.addWidget(secondLabel, 1, 0)
+        SubSecondGridLayout.addWidget(secondComboBox, 1, 1)
+        SubSecondGridLayout.addWidget(thirdLabel, 2, 0)
+        SubSecondGridLayout.addWidget(thirdComboBox, 2, 1)
+        self.SubSecondGroupBox.setLayout(SubSecondGridLayout)
+            
     def deviceChildWindow(self, ChildWindow):
         ChildWindow.setObjectName("DeviceWindow")
         ChildWindow.setWindowTitle("Device Window [ " + self.__appName + "]")
         ChildWindow.setWindowIcon(QtGui.QIcon(self.__appIconDir))
         #ChildWindow.adjustSize()
-        ChildWindow.resize(300, 600)  # w*h
+        w, h = 300,600
+        ChildWindow.resize(w, h)  # w*h
         logframe = QFrame()
         logframe.setLineWidth(0.6)
         ChildWindow.setCentralWidget(logframe)
         
         # Initialize tab screen
-        tabLayout = QGridLayout()
+        self.tabLayout = QGridLayout()
         self.devicetTabs = QTabWidget()
         self.tab1 = QWidget()
         self.tab2 = QWidget() 
@@ -861,13 +860,9 @@ class MainWindow(QMainWindow):
         
         self.GridLayout.addWidget(subIndexLabel, 0, 2)
         self.GridLayout.addWidget(self.subIndexListBox, 1, 2)
-        
         self.GridLayout.addLayout(VLayout, 2, 0,2,3)
-        tabLayout.addWidget(self.devicetTabs,0,0)
-        self.devicetTabs.addTab(self.tab1,"Device manager")
-        self.tab1.setLayout(self.GridLayout)
-        
-        self.devicetTabs.addTab(self.tab2,"ADC channels")
+        self.tab1.setLayout(self.GridLayout)        
+
         HLayout = QHBoxLayout()
         close_button = QPushButton("close")
         close_button.setIcon(QIcon('graphics_utils/icons/icon_close.jpg'))
@@ -876,31 +871,17 @@ class MainWindow(QMainWindow):
         HLayout.addSpacing(350)
         HLayout.addWidget(close_button)
         
-        # Add Adc chanels tab
+        # Add Adc channels tab
         self.adcMonitoringData()
         self.MenuBar.create_statusBar(ChildWindow)
-        tabLayout.addLayout(HLayout,1,0)
+        self.tabLayout.addLayout(HLayout,1,0)
+        #self.tabLayout.addWidget(box,0,1)
+        self.tabLayout.addWidget(self.devicetTabs,0,0)
 
-        content = QtWidgets.QWidget()
-        box = dataMonitoring.CollapsibleBox("")
-        #boxlay.addWidget(box)
-        lay = QtWidgets.QVBoxLayout()
-        self.Fig = self.compute_initial_figure()
-        self.Fig.setStyleSheet("background-color: black;"
-                                        "color: black;"
-                                        "border-width: 1.5px;"
-                                        "border-color: black;"
-                                        "margin:0.0px;"
-                                        # "border: 1px "
-                                        "solid black;")
-        self.Fig.setMaximumWidth(800)
-        #self.Fig.setMaximumHeight(800)
-
-        lay.addWidget(self.Fig)
-        lay.addStretch()
-        box.setContentLayout(lay)
-        #tabLayout.addWidget(box,0,1)
-        logframe.setLayout(tabLayout)
+        self.devicetTabs.addTab(self.tab1,"Device manager")
+        self.devicetTabs.addTab(self.tab2,"ADC channels") 
+        
+        logframe.setLayout(self.tabLayout)
         
     def adcMonitoringData(self):
         mainLayout = QGridLayout()    
@@ -987,7 +968,14 @@ class MainWindow(QMainWindow):
         self.data_line[i].setData(self.x[i], self.y[i])  # Update the data.
         
         
-    def initiate_timer(self, period=20000):
+    def initiate_timer(self, period=25000):
+        # preparing the data table:
+#         output_data ="/output_data"
+#         File = tb.open_file(rootdir[:-14]+output_data + "Adc_data"+ ".h5", 'w')
+#         description = np.zeros((1,), dtype=np.dtype([("TimeStamp", "f8"), ("Channel", "f8"), ("Id", "f8"), ("Flg", "f8"), ("DLC", "f8"), ("ADCChannel", "f8"), ("ADCData", "f8"),("ADCDataConverted", "f8")])).dtype
+#         table = File.create_table(File.root, name='ADC_results', description=description)
+#         table.flush()
+#         row = table.row
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_adc_channels)
         self.timer.start(period)
