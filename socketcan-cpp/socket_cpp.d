@@ -1,4 +1,0 @@
-
-# DO NOT DELETE
-./socket_cpp.so: /home/dcs/Installations/Root/build/include/RVersion.h /home/dcs/Installations/Root/build/include/RConfig.h /home/dcs/Installations/Root/build/include/TClass.h /home/dcs/Installations/Root/build/include/TDictAttributeMap.h /home/dcs/Installations/Root/build/include/TInterpreter.h /home/dcs/Installations/Root/build/include/TROOT.h /home/dcs/Installations/Root/build/include/TBuffer.h /home/dcs/Installations/Root/build/include/TMemberInspector.h /home/dcs/Installations/Root/build/include/TError.h /home/dcs/Installations/Root/build/include/RtypesImp.h /home/dcs/Installations/Root/build/include/TIsAProxy.h /home/dcs/Installations/Root/build/include/TFileMergeInfo.h /home/dcs/Installations/Root/build/include/TCollectionProxyInfo.h /home/dcs/Installations/Root/build/bin/rootcling
-socket_cpp__ROOTBUILDVERSION= 6.18/04
