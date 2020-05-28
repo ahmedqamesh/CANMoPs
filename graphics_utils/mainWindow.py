@@ -293,7 +293,7 @@ class MainWindow(QMainWindow):
         if text: 
             QMessageBox.about(self, "Error Message", text)
      
-    def print_sdo_can(self, nodeId=None , index=None, subIndex=None, response_from_node="response_from_node"):
+    def print_sdo_can(self, nodeId=None , index=None, subIndex=None, response_from_node=None):
         # printing the read message with cobid = SDO_RX + nodeId
         MAX_DATABYTES = 8
         msg = [0 for i in range(MAX_DATABYTES)]
@@ -304,10 +304,13 @@ class MainWindow(QMainWindow):
         # printing response 
         self.set_textBox_message(comunication_object="SDO_TX", msg=str(response_from_node))
         # print decoded response
-        decoded_response = f'{response_from_node:03X}\n-----------------------------------------------'
+        if response_from_node is not None:
+            decoded_response = f'{response_from_node:03X}\n-----------------------------------------------'
+        else:
+            decoded_response  = f'{response_from_node}\n-----------------------------------------------'
         self.set_textBox_message(comunication_object="Decoded", msg=decoded_response)
             
-    def send_can(self):
+    def writeCanMessage(self):
         try:
             textboxValue = [self.ByteTextbox[i] for i in np.arange(len(self.ByteTextbox))]
             for i in np.arange(len(self.ByteTextbox)):
@@ -322,12 +325,13 @@ class MainWindow(QMainWindow):
         except Exception:
             self.error_message(text="Make sure that the CAN interface is connected")
 
-    def read_can(self):
+    def read_can(self,print_sdo = True):
         cobid, data, dlc, flag, t = self.server.readCanMessages()
         intdata = int.from_bytes(data, byteorder=sys.byteorder)
         b1, b2, b3, b4, b5, b6, b7, b8 = intdata.to_bytes(8, 'little') 
-        self.logger.info(f'Got data: [{b1:02x}  {b2:02x}  {b3:02x}  {b4:02x}  {b5:02x}  {b6:02x}  {b7:02x} {b8:02x}]')       
-        self.set_textBox_message(comunication_object="SDO_TX", msg=str(data.hex()))
+        self.logger.info(f'Got data: [{b1:02x}  {b2:02x}  {b3:02x}  {b4:02x}  {b5:02x}  {b6:02x}  {b7:02x} {b8:02x}]')
+        if print_sdo == True:
+            self.set_textBox_message(comunication_object="SDO_TX", msg=str(data.hex()))
  
     '''
     Define all child windows
@@ -396,7 +400,7 @@ class MainWindow(QMainWindow):
         HBox = QHBoxLayout()
         send_button = QPushButton("Send")
         send_button.setIcon(QIcon('graphics_utils/icons/icon_true.png'))
-        send_button.clicked.connect(self.send_can)
+        send_button.clicked.connect(self.writeCanMessage)
         
         close_button = QPushButton("close")
         close_button.setIcon(QIcon('graphics_utils/icons/icon_close.jpg'))
@@ -534,26 +538,23 @@ class MainWindow(QMainWindow):
                 raise TimeoutException
             except Exception:
                 pass  
-
+ 
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(TIMEOUT)    
         try:
-            self.server.readCanMessages()
+            self.read_can(print_sdo = False)
             signal.alarm(0)
         except Exception:
             pass
         
     def random_can(self): 
-        SDO_RX = 0x600
-        Byte0 = cmd = 0x40  # Defines a read (reads data only from the node) dictionary object in CANOPN standard
-        index = np.random.randint(1000, 2500)
-        Byte1, Byte2 = index.to_bytes(2, 'little')
-        Byte3 = subindex = np.random.randint(0, 8)
+        _index = np.random.randint(1000, 2500)
+        _subIndex = np.random.randint(0, 8)
         try:
-            self.server.set_channelConnection(interface=self.get_interface())
-            NodeIds = self.server.get_nodeIds()
-            self.server.writeCanMessage(SDO_RX + NodeIds[0], [Byte0, Byte1, Byte2, Byte3, 0, 0, 0, 0], flag=0, timeout=3000)
-            self.server.readCanMessages()
+            _nodeId = int(self.nodeComboBox.currentText())
+            self.__response = self.server.sdoRead(_nodeId, _index, _subIndex, 3000)
+            self.set_data_point(self.__response)
+            self.print_sdo_can(nodeId=_nodeId, index=_index, subIndex=_subIndex, response_from_node=self.__response)       
         except:
             self.error_message(text="Make sure that the controller is connected")
             
@@ -791,16 +792,35 @@ class MainWindow(QMainWindow):
         self.tab2 = QWidget() 
         
         self.GridLayout = QGridLayout()
-        firstVLayout = QVBoxLayout()
-        nodeLabel = QLabel("NodeId", self)
-        nodeLabel.setText("NodeId ")
-        nodeItems = list(map(str, self.__nodeIds))
+        
+        
+        _nodeIds = self.__nodeIds
+        nodeLabel = QLabel("", self)
+        nodeLabel.setText("NodeId :                    ")
+        nodeItems = list(map(str, _nodeIds))
+        
+        
+        moduleLabel = QLabel("", self)
+        moduleLabel.setText("Connected modules :")
+        
         nodeComboBox = QComboBox(self)
         for item in nodeItems: nodeComboBox.addItem(item)
+        moduleComboBox = QComboBox(self)
+        modules = analysis_utils.get_subindex_yaml(dictionary = self.__nodeIds, index =nodeComboBox.currentText(), subindex_items = "connected_modules")
+        for item in modules: moduleComboBox.addItem(item)
+        def on_nodeComboBox_currentIndexChanged(index):
+            modules = analysis_utils.get_subindex_yaml(dictionary = self.__nodeIds, index =index, subindex_items = "connected_modules")
+            moduleComboBox.clear()
+            moduleComboBox.addItems(modules)
+            
+        nodeComboBox.currentIndexChanged[str].connect(on_nodeComboBox_currentIndexChanged)
+        nodeComboBox.setCurrentIndex(0)
 
         def __set_nodeId():
             self.set_nodeId(nodeComboBox.currentText())
-
+            
+            
+        
         icon = QLabel(self)
         pixmap = QPixmap(self.get_icon_dir())
         icon.setPixmap(pixmap.scaled(100, 100))
@@ -822,8 +842,9 @@ class MainWindow(QMainWindow):
         
         BottonHLayout.addWidget(startButton)
         BottonHLayout.addWidget(trendingButton)
-                        
-        firstVLayout.addWidget(nodeComboBox)
+        
+        firstVLayout = QVBoxLayout()              
+        #firstVLayout.addWidget(nodeComboBox)
         firstVLayout.addWidget(icon)
         firstVLayout.addWidget(device_title)
         firstVLayout.addLayout(BottonHLayout)
@@ -841,6 +862,8 @@ class MainWindow(QMainWindow):
         indexLabel.setText("   Index   ")
         self.IndexListBox = QListWidget(self)
         indexItems = self.__index_items
+        
+        
         for item in indexItems: self.IndexListBox.addItem(item)
         self.IndexListBox.currentItemChanged.connect(self.set_index_value) 
         self.IndexListBox.currentItemChanged.connect(self.get_subIndex_items)
@@ -852,7 +875,7 @@ class MainWindow(QMainWindow):
         self.subIndexListBox.currentItemChanged.connect(self.set_subIndex_value)  
         self.subIndexListBox.currentItemChanged.connect(self.get_subIndex_description)  
         
-        self.GridLayout.addWidget(nodeLabel, 0, 0)
+        #self.GridLayout.addWidget(nodeLabel, 0, 0)
         self.GridLayout.addLayout(firstVLayout, 1, 0)
         
         self.GridLayout.addWidget(indexLabel, 0, 1)
@@ -874,9 +897,20 @@ class MainWindow(QMainWindow):
         # Add Adc channels tab
         self.adcMonitoringData()
         self.MenuBar.create_statusBar(ChildWindow)
-        self.tabLayout.addLayout(HLayout,1,0)
-        #self.tabLayout.addWidget(box,0,1)
-        self.tabLayout.addWidget(self.devicetTabs,0,0)
+        nodeHLayout= QHBoxLayout()
+        moduleHLayout= QHBoxLayout()
+        
+        nodeHLayout.addWidget(nodeLabel)
+        nodeHLayout.addWidget(nodeComboBox)
+        nodeHLayout.addSpacing(300)
+         
+        moduleHLayout.addWidget(moduleLabel)
+        moduleHLayout.addWidget(moduleComboBox)
+        moduleHLayout.addSpacing(300)
+        self.tabLayout.addLayout(nodeHLayout,0,0)
+        self.tabLayout.addLayout(moduleHLayout,1,0)
+        self.tabLayout.addWidget(self.devicetTabs,2,0)
+        self.tabLayout.addLayout(HLayout,3,0)
 
         self.devicetTabs.addTab(self.tab1,"Device manager")
         self.devicetTabs.addTab(self.tab2,"ADC channels") 
@@ -1072,7 +1106,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(canMessage_action)
         # toolbar.addAction(settings_action)
         toolbar.addSeparator()
-        # toolbar.addAction(canDumpMessage_action)
+        #toolbar.addAction(canDumpMessage_action)
         # toolbar.addAction(runDumpMessage_action)
         # toolbar.addAction(stopDumpMessage_action)
         toolbar.addAction(RandomDumpMessage_action)                          
@@ -1117,7 +1151,7 @@ class MainWindow(QMainWindow):
     Define set/get functions
     '''
 
-    def set_textBox_message(self, comunication_object=None, msg="This is a message"):
+    def set_textBox_message(self, comunication_object=None, msg=None):
        
         if comunication_object == "SDO_RX"  :   
             color = QColor("green")

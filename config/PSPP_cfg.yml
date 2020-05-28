@@ -2,7 +2,7 @@ Application:
     device_name             :   'PSPP'
     device_version          :   "v3.0"
     icon_dir                :   "graphics_utils/icons/icon_pspp.png"
-    nodeIds                 :   [1]
+    nodeIds                 :   {"1":{"adctrim":"8" , "connected_modules":{"1","2","3"}}, "8":{"adctrim":"8" , "connected_modules":{"1","2"}}}
     index_items             :   {
                                 "------" :  {"description_items" :"<html><b>-----</b></html>",
                                              "subindex_items"    :{     "-----":"<html><b>-----</b></html>"}} 

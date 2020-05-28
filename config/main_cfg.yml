@@ -4,7 +4,7 @@ Application:
     app_icon_dir         :   "graphics_utils/icons/icon_mops.png"   
 
 CAN_settings:
-        nodeIdsList: [1]
+        nodeIdsList: [1,8]
 
 
 Devices:    ["PSPP"] 

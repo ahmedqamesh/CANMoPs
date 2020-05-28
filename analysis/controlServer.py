@@ -177,7 +177,6 @@ class ControlServer(object):
             self.__ch.setBusParams(self.__bitrate)
             self.logger.notice('Going in \'Bus On\' state ...')
             self.__ch.busOn()
-            self.__canMsgThread = Thread(target=self.readCanMessages)
         elif interface == 'AnaGate':
             self.__ch = analib.Channel(ipAddress=self.__ipAddress, port=self.__channel[0], baudrate=self.__bitrate)
         else:
