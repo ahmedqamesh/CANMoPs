@@ -18,7 +18,7 @@ from pyqtgraph import *
 import time
 import matplotlib as mpl
 from analysis import analysis_utils
-from graphics_utils import mainWindow, childWindow
+from graphics_utils import mainWindow
 
 
 class CollapsibleBox(QtWidgets.QWidget):

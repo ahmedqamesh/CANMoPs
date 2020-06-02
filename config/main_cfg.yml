@@ -1,6 +1,6 @@
 Application:
     app_name             :   'CAN-MoPS'
-    app_version          :   "v1.0"
+    app_version          :   "v1.1"
     app_icon_dir         :   "graphics_utils/icons/icon_mops.png"   
 
 CAN_settings:

@@ -75,7 +75,8 @@ class MainWindow(QMainWindow):
         self.server = None
         # Show a textBox
         self.textBoxWindow()
-        self.MainWindow = QMainWindow()
+        #ChildWindow.ChildWindow()
+        
         
     def configure_devices(self, dev):
         self.__appName = dev["Application"]["device_name"] 
@@ -210,7 +211,7 @@ class MainWindow(QMainWindow):
         deviceLabel = QLabel("Configure Device", self)
         self.deviceButton = QPushButton("")
         self.deviceButton.setStatusTip('Choose the configuration yaml file')
-        if self.__devices is None:
+        if self.__devices[0] == "None":
             deviceLabel.setText("Configure Device")
             self.deviceButton.setIcon(QIcon('graphics_utils/icons/icon_question.png'))
             self.deviceButton.clicked.connect(self.update_DeviceBox)
@@ -221,7 +222,7 @@ class MainWindow(QMainWindow):
         self.HLayout.addWidget(self.deviceButton)
 
     def update_DeviceBox(self):
-        if self.__devices is None:
+        if self.__devices[0] == "None":
             conf = self.child.open()
         else:
             conf = analysis_utils.open_yaml_file(file=self.config_dir + self.__devices[0] + "_cfg.yml", directory=rootdir[:-14])

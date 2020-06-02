@@ -4,7 +4,7 @@ from PyQt5.QtCore    import *
 from PyQt5.QtGui     import *
 from PyQt5.QtWidgets import *
 from PyQt5 import QtGui
-from graphics_utils import dataMonitoring , logWindow 
+from graphics_utils import dataMonitoring , logWindow #, mai
 import numpy as np
 import os
 import binascii
