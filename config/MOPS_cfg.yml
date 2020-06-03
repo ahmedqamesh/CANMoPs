@@ -1,8 +1,10 @@
 Application:
-    device_name             :   'MoPS'
+    device_name             :   'MOPS'
     device_version          :   "v1.0"
     icon_dir                :   "graphics_utils/icons/icon_mops.png"
-    nodeIds                 :   {"1":{"adctrim":"8" , "connected_modules":{"1","2","3"}}, "8":{"adctrim":"8" , "connected_modules":{"1","2"}}}
+    channelList             :   {"1":{"adctrim":"8" , "connected_nodes":{"1"}}, 
+                                 "8":{"adctrim":"8" , "connected_nodes":{"1"}},
+                                 "can0":{"adctrim":"8" , "connected_nodes":{"1","2"}}}
     index_items             :   {
                                 "------" :  {"description_items" :"<html><b>-----</b></html>",
                                              "subindex_items"    :{     "-----":"<html><b>-----</b></html>"}} 

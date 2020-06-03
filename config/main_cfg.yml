@@ -1,16 +1,13 @@
 Application:
-    app_name             :   'CAN-MoPS'
+    app_name             :   'CANMoPS'
     app_version          :   "v1.1"
     app_icon_dir         :   "graphics_utils/icons/icon_mops.png"   
 
-CAN_settings:
-        nodeIdsList: [1,8]
+channel_ports:      {"0","1","2"}
 
-
-Devices:    ["PSPP"] 
+Devices:    ["MOPS"] 
 
 default_values:
-    interface_items : ["----","AnaGate" , "Kvaser","socketcan"]
     index_items     : ["0x1000"]
     bitrate_items   : ["10000", "20000", "50000", "62500", "100000", "125000", "250000", "500000", "1000000"]     
     bytes           : ["64","0","16","0","0","0","0","0"] 
@@ -18,24 +15,8 @@ default_values:
     cobid           : "0x601"
     dlc             : "8"
 
-CAN_Interface:
-    AnaGate :
-        name        :   'AnaGate'
-        bitrate     :   125000
-        ipAddress   :   '192.168.1.254'
-        timeout     :   500
-        channel     :   [1]
-    
-    Kvaser  :
-        name        :   'Kvaser'
-        bitrate     :   125000
-        ipAddress   :   '192.168.1.254'
-        timeout     :   500
-        channel     :   [0]
-    
-    can     :
-        name        :   'socketcan'
-        bitrate     :   125000
-        channel     :   ["can0"]
+CAN_Interfaces:   {"AnaGate"    :{"bitrate":125000 , "ipAddress":"192.168.1.254"    ,timeout:500    ,"channels":{1: [1]}},
+                   "Kvaser"     :{"bitrate":125000 , "ipAddress":"None"             ,timeout:500    ,"channels":{0: [1]}},
+                   "socketcan"  :{"bitrate":125000 , "ipAddress":"None"             ,timeout:500    ,"channels":{0: [1]}}}
 Other:
     user    :   "Ahmed Qamesh"

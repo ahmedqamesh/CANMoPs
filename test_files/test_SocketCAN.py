@@ -5,7 +5,7 @@ import os
 import can
 rootdir = os.path.dirname(os.path.abspath(__file__))
 print('CAN hardware OS drivers and config for CAN0')
-os.system(". " + rootdir[:-10] + "analysis/socketcan_install.sh")
+#os.system(". " + rootdir[:-10] + "analysis/socketcan_install.sh")
         
 bustype = ['socketcan',"pcan","ixxat","vector"]
 channel = 'can0'
@@ -39,8 +39,8 @@ def producer(id, N = None):
         else:
             cobid, data, dlc, flag, t = message.arbitration_id, message.data, message.dlc, message.is_extended_id, message.timestamp
             print(f'ID: {cobid:03X}; Data: {data.hex()}, DLC: {dlc}')
+    
     time.sleep(1)
-
 
 if __name__ == '__main__':
     pass    

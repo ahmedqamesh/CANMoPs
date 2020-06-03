@@ -75,14 +75,14 @@ def get_subindex_description_yaml(dictionary = None, index =None, subindex = Non
     subindex_description_items = subindex_items[subindex]
     return subindex_description_items
 
-def get_index_description_yaml(dictionary = None, index =None):
+def get_info_yaml(dictionary = None, index =None, subindex = "description_items"):
     index_item = [dictionary[i] for i in [index] if i in dictionary]
-    index_description_items = index_item[0]["description_items"]
+    index_description_items = index_item[0][subindex]
     return index_description_items
             
-def get_subindex_yaml(dictionary = None, index =None, subindex_items = "subindex_items"):
+def get_subindex_yaml(dictionary = None, index =None, subindex = "subindex_items"):
     index_item = [dictionary[i] for i in [index] if i in dictionary]
-    subindex_items = index_item[0][subindex_items]
+    subindex_items = index_item[0][subindex]
     return subindex_items.keys()
 
 def get_project_root() -> Path:

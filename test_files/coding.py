@@ -13,11 +13,36 @@ print(["#ededed", "#f7e5b2","#fcc48d","#e64e4b","#984071","#58307b","#432776","#
        "#ecaf83","#dd8a5b","#904a5d","#5d375a","#402b55","#332d58","#3b337a","#365a9b","#2c4172","#2f3f60","#3f5d92","#4e7a80","#60b37e","#b3daa3",
        "#cfe8b7","#d2d2ba","#bab59e","#8b7c99","#6a5c9d"",#4c428d","#3a3487","#31222c"])
 n_channels = np.arange(3, 35)
+
+
+from PyQt5 import QtCore
+
+def start_timer(slot, count=1, interval=1000):
+    counter = 0
+    def handler():
+        nonlocal counter
+        counter += 1
+        slot(counter)
+        if counter >= count:
+            timer.stop()
+            timer.deleteLater()
+    timer = QtCore.QTimer()
+    timer.timeout.connect(handler)
+    timer.start(interval)
+
+def timer_func(count):
+    print('Timer:', count)
+    if count >= 5:
+        QtCore.QCoreApplication.quit()
+
+app = QtCore.QCoreApplication([])
+start_timer(timer_func, 5)
+app.exec_()
+
 # for i in tqdm(np.arange(len(n_channels)), ncols = 50, ascii = True, desc ="ADC channels"):
 #     sleep(0.25)
 #     print(i)
 #
-from configparser import ConfigParser
 # from PyQt5 import QtCore, QtGui, QtWidgets
 # 
 # 
