@@ -13,9 +13,10 @@ from pathlib import Path
 from threading import Thread, Event, Lock
 import matplotlib as mpl
 import numpy as np
-from analysis import analysis_utils
+from analysis import analysis, analysis_utils
 # Third party modules
 from collections import deque, Counter
+from tqdm import tqdm
 import ctypes as ct
 import logging
 from termcolor import colored
@@ -54,8 +55,8 @@ class ControlServer(object):
 
     def __init__(self, parent=None,
                  config=None, interface=None,
+                 device=None,channel=None, 
                  bitrate=None,ipAddress=None,
-                 channel=None, 
                  set_channel=False,
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
@@ -71,7 +72,9 @@ class ControlServer(object):
         # Read configurations from a file
         if config is None:
             self.__conf = analysis_utils.open_yaml_file(file=config_dir + "main_cfg.yml", directory=rootdir[:-8])
-        self._index_items = self.__conf["default_values"]["index_items"]      
+        self._index_items = self.__conf["default_values"]["index_items"]
+        self.__devices = self.__conf["Devices"]      
+        self.__adctrim = self.__conf["default_values"]["adctrim"]
         self.__bitrate_items = self.__conf['default_values']['bitrate_items']
         self.__bytes = self.__conf["default_values"]["bytes"]
         self.__subIndex = self.__conf["default_values"]["subIndex"]
@@ -80,11 +83,21 @@ class ControlServer(object):
         self.__channelPorts = self.__conf["channel_ports"]
         self.__ipAddress = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="ipAddress")
         self.__bitrate = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="bitrate")
-        self.__channel = list(analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="channels"))[0]            
+        self.__channels  = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="channels")
+        self.__channel = list(analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="channels"))[0]         
         self.logger.notice('... Loading all the configurations!')
-        
+        if device is None:
+            dev = analysis_utils.open_yaml_file(file=config_dir + self.__devices[0] + "_cfg.yml", directory=rootdir[:-8])
+            self.__deviceName = dev["Application"]["device_name"] 
+            self.__version = dev['Application']['device_version']
+            self.__appIconDir = dev["Application"]["icon_dir"]
+            self.__nodeIds = dev["Application"]["nodeIds"]
+            self.__nodeIds = dev["Application"]["nodeIds"]
+            self.__dictionary_items = dev["Application"]["index_items"]
+            self.__index_items = list(self.__dictionary_items.keys())
+            self.__adc_channels_reg = dev["adc_channels_reg"]["adc_channels"]
+            self.__adc_index = dev["adc_channels_reg"]["adc_index"]
         # Initialize default arguments
-        
         """:obj:`str` : Internal attribute for the interface"""
         self.__interface = interface
                 
@@ -150,17 +163,15 @@ class ControlServer(object):
 
     def confirmNodes(self, timeout=100):
         self.logger.notice('Checking bus connections ...')
-        _interface = self.__interface
-        _channels = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=_interface, subindex="channels")
-        for channel in _channels:
-            _nodeIds =_channels[channel]
-            self.set_nodeIds(_nodeIds)
+        for channel in self.__channels:
+            _nodeIds =self.__channels[channel]
+            self.set_nodeList(_nodeIds)
             self.logger.info(f'Connection to channel {channel} has been ' f'verified.')
             for nodeId in _nodeIds:
                 dev_t = self.sdoRead(nodeId, 0x1000, 0, timeout)
                 if dev_t is None:
                     self.logger.error(f'Node {nodeId} in channel {channel} did not answer!')
-                    # self.__nodeIds.remove(nodeId)
+                    # self.__nodeList.remove(nodeId)
                 else:
                     self.logger.info(f'Connection to node {nodeId} in channel {channel} has been '
                                      f'verified.')
@@ -203,7 +214,39 @@ class ControlServer(object):
             pass
         self.__canMsgThread = Thread(target=self.readCanMessages)
         self.__canMsgThread.start()
-          
+    
+    def read_adc_channels(self):
+        """Start actual CANopen communication
+        This function contains an endless loop in which it is looped over all
+        ADC channels. Each value is read using
+        :meth:`sdoRead` and written to its corresponding
+        """
+        
+        count = 0
+        while count<2:#True:
+            #count = 0 if count == 10 else count
+             # Loop over all channelPorts
+            for channel in self.__channelPorts:
+            # Loop over all connected CAN nodeIds
+                _nodeIds =self.__channels[int(channel)]
+                for nodeId in _nodeIds:                                                       
+                    #Read ADC channels
+                    _adc_channels_reg = self.__adc_channels_reg
+                    _dictionary = self.__dictionary_items
+                    _adc_index = self.__adc_index
+                    _subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=_dictionary, index=_adc_index, subindex ="subindex_items"))
+                    pbar = tqdm(total=len(_subIndexItems)*10,desc="ADC channels",iterable=True)
+                    for i in np.arange(len(_subIndexItems)):
+                        _index = int(_adc_index, 16)
+                        _subIndex = int(_subIndexItems[i], 16)
+                        adcVals = self.sdoRead(nodeId, _index,_subIndex, 3000)
+                        #self.__mypyDCs[nodeId].write('ADCTRIM')
+                        if adcVals is not None:
+                            vals = analysis.Analysis().adc_conversion(_adc_channels_reg[str(i)],adcVals)
+                        pbar.update(10)
+                    pbar.close()
+                    #
+            count += 1
     def stop(self):
         """Close |CAN| channel and stop the |OPCUA| server
         Make sure that this is called so that the connection is closed in a
@@ -252,9 +295,12 @@ class ControlServer(object):
         self.__interface = x
 
                 
-    def set_nodeIds(self, x):
-        self.__nodeIds = x
+    def set_nodeList(self, x):
+        self.__nodeList = x
     
+    def set_channelPorts(self, x):
+        self.__channelPorts = x
+            
     def set_channel(self, x):
         self.__channel = x
     
@@ -273,9 +319,12 @@ class ControlServer(object):
         ret = analib.wrapper.dllInfo()
         return ret
     
-    def get_nodeIds(self):
-        return self.__nodeIds
-    
+    def get_nodeList(self):
+        return self.__nodeList
+
+    def get_channelPorts(self):
+        return self.__channelPorts
+        
     def get_bitrate(self):
         return self.__bitrate
 
@@ -378,7 +427,28 @@ class ControlServer(object):
             self.start()
         else:
             self.__ch.baudrate = bitrate     
+    @property
+    def mypyDCs(self):
+        """:obj:`dict`: Dictionary containing |DCS| Controller mirror classes.
+        Key is the CANopen node id."""
+        return self.__mypyDCs
 
+    @property
+    def idx(self):
+        """:obj:`int` : Index of custom namespace"""
+        return self.__idx
+
+    @property
+    def myDCs(self):
+        """:obj:`list` : List of created UA objects"""
+        return self.__myDCs
+
+    @property
+    def od(self):
+        """:class:`~dcsControllerServer.objectDictionary.objectDictionary` :
+        Object dictionary for checking access attributes"""
+        return self.__od
+        
     def sdoRead(self, nodeId, index, subindex, timeout=100, MAX_DATABYTES=8):
         """Read an object via |SDO|
     
@@ -461,6 +531,92 @@ class ControlServer(object):
         self.logger.info(f'Got data: {data}')
         return int.from_bytes(data, 'little')
 
+    def sdoWrite(self, nodeId, index, subindex, value, timeout=3000):
+        """Write an object via |SDO| expedited write protocol
+        This sends the request and analyses the response.
+        Parameters
+        ----------
+        nodeId : :obj:`int`
+            The id from the node to read from
+        index : :obj:`int`
+            The |OD| index to read from
+        subindex : :obj:`int`
+            Subindex. Defaults to zero for single value entries
+        value : :obj:`int`
+            The value you want to write.
+        timeout : :obj:`int`, optional
+            |SDO| timeout in milliseconds
+        Returns
+        -------
+        :obj:`bool`
+            If writing the object was successful
+        """
+
+        # Create the request message
+        self.logger.notice(f'Send SDO write request to node {nodeId}, object '
+                           f'{index:04X}:{subindex:X} with value {value:X}.')
+        self.cnt['SDO write total'] += 1
+        if value < self.__od[index][subindex].minimum or value > self.__od[index][subindex].maximum:
+            self.logger.error(f'Value for SDO write protocol outside value ' f'range!')
+            self.cnt['SDO write value range'] += 1
+            return False
+        SDO_TX = 0x580  
+        SDO_RX = 0x600
+        
+        cobid = SDO_RX + nodeId
+        datasize = len(f'{value:X}') // 2 + 1
+        data = value.to_bytes(4, 'little')
+        msg = [0 for i in range(8)]
+        msg[0] = (((0b00010 << 2) | (4 - datasize)) << 2) | 0b11
+        msg[1], msg[2] = index.to_bytes(2, 'little')
+        msg[3] = subindex
+        msg[4:] = [data[i] for i in range(4)]
+        # Send the request message
+        try:
+            self.writeCanMessage(cobid, msg,timeout=timeout)
+        except CanGeneralError:
+            self.cnt['SDO write request timeout'] += 1
+            return False
+#         except analib.exception.DllException as ex:
+#             self.logger.exception(ex)
+#             self.cnt['SDO write request timeout'] += 1
+#             return False
+
+        # Read the response from the bus
+        t0 = time.perf_counter()
+        messageValid = False
+        while time.perf_counter() - t0 < timeout / 1000:
+            with self.lock:
+                for i, (cobid_ret, ret, dlc, flag, t) in \
+                        zip(range(len(self.__canMsgQueue)),
+                            self.__canMsgQueue):
+                    messageValid = \
+                        (dlc == 8 and cobid_ret == SDO_TX + nodeId
+                         and ret[0] in [0x80, 0b1100000] and
+                         int.from_bytes([ret[1], ret[2]], 'little') == index
+                         and ret[3] == subindex)
+                    if messageValid:
+                        del self.__canMsgQueue[i]
+                        break
+            if messageValid:
+                break
+        else:
+            self.logger.warning('SDO write timeout')
+            self.cnt['SDO write timeout'] += 1
+            return False
+        # Analyse the response
+        if ret[0] == 0x80:
+            abort_code = int.from_bytes(ret[4:], 'little')
+            self.logger.error(f'Received SDO abort message while writing '
+                              f'object {index:04X}:{subindex:02X} of node '
+                              f'{nodeId} with abort code {abort_code:08X}')
+            self.cnt['SDO write abort'] += 1
+            return False
+        else:
+            self.logger.success('SDO write protocol successful!')
+        return True
+    
+    
     def writeCanMessage(self, cobid, msg, flag=0, timeout=None):
         """Combining writing functions for different |CAN| interfaces
         Parameters

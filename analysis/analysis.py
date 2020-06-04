@@ -7,15 +7,11 @@ import numba
 import tables as tb
 from tqdm import tqdm
 from scipy.optimize import curve_fit
-loglevel = logging.getLogger('Analysis').getEffectiveLevel()
-from analysis import logger
-np.warnings.filterwarnings('ignore')
 
 class Analysis(object):
     
     def __init__(self):
-        self.log = logger.setup_derived_logger('Analysis')
-        self.log.info('Analysis initialized')
+        pass
     # Fit functions
     def linear(self, x, m, c):
         return m * x + c
@@ -35,5 +31,14 @@ class Analysis(object):
     def Inverse_square(self, x, a, b, c):
         return a / (x + b)**2 - c
     
+    def adc_conversion(self, adc_channels_reg="V", value=None):
+        if value is not None:
+            if adc_channels_reg == "V":
+                value = value * 207 * 10e-6 * 40
+            elif adc_channels_reg == "T":
+                value = value * 207 * 10e-6
+            else:
+                value = value * 207 * 10e-6
+        return value
 if __name__ == "__main__":
         pass

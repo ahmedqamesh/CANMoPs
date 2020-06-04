@@ -86,11 +86,14 @@ Application:
                                                                         "1C":"<html><u>subindex 1C</u>:ADCCh30</html>",
                                                                         "1D":"<html><u>subindex 1D</u>:ADCCh31</html>",                                                     
                                                                         "1E":"<html><u>subindex 1E</u>:ADCCh32</html>",
-                                                                        "1F":"<html><u>subindex 20</u>:ADCCh33</html>",
-                                                                        "20":"<html><u>subindex 21</u>:ADCCh34</html>"}}}
+                                                                        "1F":"<html><u>subindex 1F</u>:ADCCh33</html>",
+                                                                        "20":"<html><u>subindex 20</u>:ADCCh34</html>"}}}
 adc_channels_reg:
     adc_index               : "0x2400"
-    adc_channels            : {"3":"V",
+    adc_channels            : {"0":"None",
+                               "1":"None",
+                               "2":"None",
+                               "3":"V",
                                "4":"V",
                                "5":"V",
                                "6":"V",
@@ -121,4 +124,4 @@ adc_channels_reg:
                                "31":"V",
                                "32":"V",
                                "33":"V",
-                               "34":"V"} 
+                               "34":"T"} 

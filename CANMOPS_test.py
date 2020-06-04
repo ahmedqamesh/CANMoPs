@@ -47,8 +47,8 @@ def test():
 
 
 if __name__=='__main__':
-    
     #server = controlServer.ControlServer(interface = "AnaGate", set_channel =True)
     server = controlServer.ControlServer(interface = "socketcan", set_channel =True)
     #server = controlServer.ControlServer(interface = "Kvaser", set_channel =True)
+    server.read_adc_channels()
     test()

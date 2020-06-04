@@ -22,7 +22,7 @@ import numpy as np
 from random import randint
 from matplotlib.figure import Figure
 from graphics_utils import dataMonitoring , logWindow, childWindow, menuWindow
-from analysis import analysis_utils , controlServer
+from analysis import analysis, analysis_utils , controlServer
 import binascii
 from tqdm import tqdm
 import tables as tb
@@ -78,7 +78,6 @@ class MainWindow(QMainWindow):
         self.index_description_items = None
         self.subIndex_description_items = None
         self.__response = None
-        self.n_channels = np.arange(3, 35)
         self.server = None
         # Show a textBox
         self.textBoxWindow()
@@ -278,7 +277,7 @@ class MainWindow(QMainWindow):
         self.set_deviceName(deviceName)
         self.set_version(version)
         self.set_icon_dir(icon_dir)
-        self.set_nodeIds(nodeIds)
+        self.set_nodeList(nodeIds)
         self.set_dictionary_items(dictionary_items)                
         self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
         self.deviceButton.clicked.connect(self.show_deviceWindow)
@@ -301,8 +300,8 @@ class MainWindow(QMainWindow):
                     _nodIds = _canSettings['CAN_Interfaces'][_interface]["nodIds"]
                     
                     #Update settings
-                    self.set_nodeIds(_nodIds)
-                    self.set_channelList(list(str(_channels)))                
+                    self.set_nodeList(_nodIds)
+                    self.set_channelPorts(list(str(_channels)))                
                     self.set_channel(_channels)
                     #Update buttons
                     self.channelComboBox.clear()
@@ -672,11 +671,12 @@ class MainWindow(QMainWindow):
  
     def compute_initial_figure(self):
         self.graphWidget = pg.PlotWidget(background="w")
-        self.data_line = [0 for i in np.arange(len(self.n_channels))]
+        n_channels = np.arange(3, 35)
+        self.data_line = [0 for i in np.arange(len(n_channels))]
         self.col_row = ["#ededed", "#f7e5b2", "#fcc48d", "#e64e4b", "#984071", "#58307b", "#432776", "#3b265e", "#4f2e6b", "#943ca6", "#df529e", "#f49cae", "#f7d2bb", "#f4ce9f",
                    "#ecaf83", "#dd8a5b", "#904a5d", "#5d375a", "#402b55", "#332d58", "#3b337a", "#365a9b", "#2c4172", "#2f3f60", "#3f5d92", "#4e7a80", "#60b37e", "#b3daa3",
                    "#cfe8b7", "#d2d2ba", "#bab59e", "#8b7c99", "#6a5c9d"",#4c428d", "#3a3487", "#31222c"]   
-        for i in np.arange(len(self.n_channels)):
+        for i in np.arange(len(n_channels)):
             if self.trendingBox[i].isChecked():
                 self.data_line[i] = self.graphWidget.plot(name="Ch%i" % i)
                 # Add legend
@@ -896,13 +896,13 @@ class MainWindow(QMainWindow):
         nodeLabel.setText("Connected nodes :")
         
 
-        nodeComboBox = QComboBox(self)
+        self.deviceNodeComboBox = QComboBox(self)
         nodeItems = self.__nodeIds
-        self.set_nodeIds(nodeItems)
-        for item in list(map(str, nodeItems)): nodeComboBox.addItem(item)
+        self.set_nodeList(nodeItems)
+        for item in list(map(str, nodeItems)): self.deviceNodeComboBox.addItem(item)
 
         def __set_bus():
-            self.set_nodeId(nodeComboBox.currentText())
+            self.set_nodeId(self.deviceNodeComboBox.currentText())
             
         icon = QLabel(self)
         pixmap = QPixmap(self.get_icon_dir())
@@ -983,7 +983,7 @@ class MainWindow(QMainWindow):
         channelHLayout= QHBoxLayout()
         nodeHLayout= QHBoxLayout()
         nodeHLayout.addWidget(nodeLabel)
-        nodeHLayout.addWidget(nodeComboBox)
+        nodeHLayout.addWidget(self.deviceNodeComboBox)
         nodeHLayout.addSpacing(300)
         
         self.tabLayout.addLayout(channelHLayout,0,0)
@@ -997,35 +997,39 @@ class MainWindow(QMainWindow):
         logframe.setLayout(self.tabLayout)
         
     def adcMonitoringData(self):
+        # needed info to read the ADC from the yaml file
+        _adc_channels_reg = self.get_adc_channels_reg()
+        _dictionary = self.__dictionary_items
+        _adc_index = self.get_adc_index()
+        self._subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=_dictionary, index=_adc_index, subindex ="subindex_items"))
+        
         mainLayout = QGridLayout()    
         SecondGridLayout = QGridLayout()
-        LabelChannel = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
-        self.ChannelBox = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
-        self.trendingBox = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
-        self.trendingBotton = [self.n_channels[i] for i in np.arange(len(self.n_channels))]
-        adc_channels_reg = self.get_adc_channels_reg()
-        dictionary = self.__dictionary_items
-        adc_index = self.get_adc_index()
-        
-        self.subIndexItems = list(analysis_utils.get_subindex_yaml(dictionary=dictionary, index=adc_index, subindex ="subindex_items"))
-        self.x = [0 for i in np.arange(len(self.n_channels))]
-        self.y = [0 for i in np.arange(len(self.n_channels))]
-        for i in np.arange(len(self.n_channels)):
-            self.x[i] = list(range(2))  # 10 time points
-            self.y[i] = [0 for _ in range(2)]  # 10 data points
-            LabelChannel[i] = QLabel("Channel", self)
-            LabelChannel[i].setText("Ch" + str(self.n_channels[i]) + ":")
+        labelChannel = [self._subIndexItems[i] for i in np.arange(len(self._subIndexItems))]
+        self.ChannelBox = [self._subIndexItems[i] for i in np.arange(len(self._subIndexItems))]
+        self.trendingBox = [self._subIndexItems[i] for i in np.arange(len(self._subIndexItems))]
+        self.trendingBotton = [self._subIndexItems[i] for i in np.arange(len(self._subIndexItems))]
+
+        #self.x = [0 for i in np.arange(len(self._subIndexItems))]
+        #self.y = [0 for i in np.arange(len(self._subIndexItems))]
+        _start_a = 1 # to ignore the first subindex
+        for i in np.arange(_start_a,len(self._subIndexItems)):
+            #self.x[i] = list(range(2))  # 10 time points
+            #self.y[i] = [0 for _ in range(2)]  # 10 data points
+            labelChannel[i] = QLabel("Channel", self)
+            _channelName = int(str(self._subIndexItems[i]), 16)+2
+            labelChannel[i].setText("Ch" + str(_channelName) + ":")
             self.ChannelBox[i] = QLineEdit("", self)
             self.ChannelBox[i].setStyleSheet("background-color: white; border: 1px inset black;")
             self.ChannelBox[i].setReadOnly(True)
-            LabelChannel[i].setStatusTip('ADC channel %s [index = %s & subIndex = %s]' % (str(self.n_channels[i]), adc_index, self.subIndexItems[i + 1]))  # show when move mouse to the icon
-            self.icon = QLabel(self)
-            if adc_channels_reg[str(i + 3)] == "V":       
+            labelChannel[i].setStatusTip('ADC channel %s [index = %s & subIndex = %s]' % (str(self._subIndexItems[i]), _adc_index, self._subIndexItems[i]))  # show when move mouse to the icon
+            icon = QLabel(self)
+            if _adc_channels_reg[str(_channelName)] == "V":  
                 icon_dir = 'graphics_utils/icons/icon_voltage.png'
-            else:
+            else:   
                 icon_dir = 'graphics_utils/icons/icon_thermometer.png'
             pixmap = QPixmap(icon_dir)
-            self.icon.setPixmap(pixmap.scaled(20, 20))
+            icon.setPixmap(pixmap.scaled(20, 20))
             self.trendingBotton[i] = QPushButton("")
             self.trendingBotton[i].setObjectName(str(i))
             self.trendingBotton[i].setIcon(QIcon('graphics_utils/icons/icon_trend.jpg'))
@@ -1036,23 +1040,30 @@ class MainWindow(QMainWindow):
             self.trendingBox[i].setStatusTip('Data Trending')
             self.trendingBox[i].setChecked(False)
             self.trendingBox[i].stateChanged.connect(self.stateBox)
-            if i < 16:
-                SecondGridLayout.addWidget(self.icon, i, 0)
+            grid_location = i-1 # to relocate the boxes
+            if grid_location < 16:
+                SecondGridLayout.addWidget(icon, grid_location, 0)
                 # SecondGridLayout.addWidget(self.trendingBox[i], i, 1)
                 # SecondGridLayout.addWidget(self.trendingBotton[i], i, 2)
-                SecondGridLayout.addWidget(LabelChannel[i], i, 3)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i, 4)
+                SecondGridLayout.addWidget(labelChannel[i], grid_location, 3)
+                SecondGridLayout.addWidget(self.ChannelBox[i], grid_location, 4)
             else:
-                SecondGridLayout.addWidget(self.icon, i - 16, 5)
+                SecondGridLayout.addWidget(icon, grid_location - 16, 5)
                 # SecondGridLayout.addWidget(self.trendingBox[i], i-16, 6)
                 # SecondGridLayout.addWidget(self.trendingBotton[i], i-16, 7)
-                SecondGridLayout.addWidget(LabelChannel[i], i - 16, 8)
-                SecondGridLayout.addWidget(self.ChannelBox[i], i - 16 , 9)
+                SecondGridLayout.addWidget(labelChannel[i], grid_location - 16, 8)
+                SecondGridLayout.addWidget(self.ChannelBox[i], grid_location - 16 , 9)
                 
         #Figure = self.compute_initial_figure()
+        
+        def __set_bus():
+            self.set_nodeId(self.deviceNodeComboBox.currentText())
+            
+            
         HBox = QHBoxLayout()
         send_button = QPushButton("run")
         send_button.setIcon(QIcon('graphics_utils/icons/icon_start.png'))
+        send_button.clicked.connect(__set_bus)
         send_button.clicked.connect(self.initiate_timer)
         
         trend_button = QPushButton("Trend")
@@ -1081,7 +1092,7 @@ class MainWindow(QMainWindow):
         self.data_line[i].setData(self.x[i], self.y[i])  # Update the data.
         
         
-    def initiate_timer(self, period=25000):
+    def initiate_timer(self, period=30000):
         # preparing the data table:
 #         output_data ="/output_data"
 #         File = tb.open_file(rootdir[:-14]+output_data + "Adc_data"+ ".h5", 'w')
@@ -1090,7 +1101,7 @@ class MainWindow(QMainWindow):
 #         table.flush()
 #         row = table.row
         self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.update_adc_channels)
+        self.timer.timeout.connect(self.read_adc_channels)
         self.timer.start(period)
 
     def stop_timer(self):
@@ -1099,37 +1110,33 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def update_adc_channels(self):
+    def read_adc_channels(self):
         _adc_index = self.get_adc_index()
         _adc_channels_reg = self.get_adc_channels_reg()
-        adc_updated = []
+        # set index for later usage
+        self.set_index(_adc_index)
+        #adc_updated = []
         self.adc_converted = []
-        pbar = tqdm(total=len(self.n_channels)*10,desc="ADC channels",iterable=True)
-        for i in np.arange(len(self.n_channels)):
-            self.set_index(_adc_index)
-            self.set_subIndex(self.subIndexItems[i + 1])
+        pbar = tqdm(total=len(self._subIndexItems)*10,desc="ADC channels",iterable=True)
+        _start_a = 1 # to ignore the first subindex
+        for i in np.arange(_start_a, len(self._subIndexItems)):
+            self.set_subIndex(self._subIndexItems[i])
             self.send_sdo_can(print_sdo=False)
             data_point = self.get_data_point()
-            adc_updated = np.append(adc_updated, data_point)
-            self.adc_converted = np.append(self.adc_converted, self.adc_conversion(_adc_channels_reg[str(i + 3)], adc_updated[i]))
-            if self.adc_converted[i] is not None:
-                self.ChannelBox[i].setText(str(round(self.adc_converted[i], 3)))
+            #adc_updated = np.append(adc_updated, data_point)
+            _channelName = int(str(self._subIndexItems[i]), 16) + 2
+            correction = i-1 # to relocate the boxes
+            self.adc_converted = np.append(self.adc_converted, analysis.Analysis().adc_conversion(_adc_channels_reg[str(_channelName)], data_point))
+            if self.adc_converted[correction] is not None:
+                self.ChannelBox[i].setText(str(round(self.adc_converted[correction], 3)))
                 if self.trendingBox[i].isChecked():
-                    self.update_figure(data=self.adc_converted[i], i=i)
+                    self.update_figure(data=self.adc_converted[correction], i=i)
             else:
-                self.ChannelBox[i].setText(str(self.adc_converted[i]))
+                self.ChannelBox[i].setText(str(self.adc_converted[correction]))
             pbar.update(10)
         pbar.close()
         return self.adc_converted
-    
-    def adc_conversion(self, adc_channels_reg="V", value=None):
-        if value is not None:
-            if adc_channels_reg == "V":
-                value = value * 207 * 10e-6 * 40
-            else:
-                value = value * 207 * 10e-6
-        return value
-    
+        
     def stateBox(self, checked):
         # if state == QtCore.Qt.Checked:
         checkBox = self.sender() 
@@ -1265,7 +1272,7 @@ class MainWindow(QMainWindow):
         self.__adc_channels_reg = x
     
     def set_adc_index(self, x):
-        self.set_adc_index = x
+        self.__adc_index = x
     
     def set_version(self, x):
         self.__version = x
@@ -1276,11 +1283,11 @@ class MainWindow(QMainWindow):
     def set_dictionary_items(self, x):
         self.__dictionary_items = x
 
-    def set_nodeIds(self, x):
+    def set_nodeList(self, x):
         self.__nodeId = x 
     
-    def set_channelList(self, x):
-        self.__channelList = x 
+    def set_channelPorts(self, x):
+        self.__channelPorts = x 
                
     def set_interfaceItems(self, x):
         self.__interfaceItems = x  
@@ -1326,7 +1333,10 @@ class MainWindow(QMainWindow):
                
     def get_nodeId(self):
         return self.__nodeId
-        
+
+    def get_channelPorts(self):
+        return self.__channelPorts
+            
     def get_index(self):
         return self.__index
           
@@ -1346,7 +1356,7 @@ class MainWindow(QMainWindow):
         return self.__adc_channels_reg
     
     def get_adc_index(self):
-        return self.set_adc_index
+        return self.__adc_index
         
     def get_nodeIds(self):
         return self.__nodeIds
