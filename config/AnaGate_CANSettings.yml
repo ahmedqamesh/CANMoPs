@@ -1,0 +1,8 @@
+CAN_Interfaces:
+  AnaGate:
+    bitrate: 125000
+    channels: 1
+    ipAddress: 192.168.1.254
+    nodIds:
+    - 1
+    timeout: 500

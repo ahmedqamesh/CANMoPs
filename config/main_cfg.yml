@@ -2,7 +2,7 @@ Application:
     app_name             :   'CANMoPS'
     app_version          :   "v1.1"
     app_icon_dir         :   "graphics_utils/icons/icon_mops.png"   
-
+    can_settings         : True
 channel_ports:      {"0","1","2"}
 
 Devices:    ["MOPS"] 
@@ -14,9 +14,11 @@ default_values:
     subIndex        : "0"
     cobid           : "0x601"
     dlc             : "8"
-
-CAN_Interfaces:   {"AnaGate"    :{"bitrate":125000 , "ipAddress":"192.168.1.254"    ,timeout:500    ,"channels":{1: [1]}},
-                   "Kvaser"     :{"bitrate":125000 , "ipAddress":"None"             ,timeout:500    ,"channels":{0: [1]}},
-                   "socketcan"  :{"bitrate":125000 , "ipAddress":"None"             ,timeout:500    ,"channels":{0: [1]}}}
+    bitrate         : 125000
+    ipAddress       : "192.168.1.254"
+    channel         : 1
+CAN_Interfaces:   {"AnaGate"    :{"bitrate":125000 , "ipAddress":"192.168.1.254"    ,"timeout":500    ,"channels":{1: [1]}},
+                   "Kvaser"     :{"bitrate":125000 , "ipAddress":"None"             ,"timeout":500    ,"channels":{0: [1]}},
+                   "socketcan"  :{"bitrate":125000 , "ipAddress":"None"             ,"timeout":500    ,"channels":{0: [1]}}}
 Other:
     user    :   "Ahmed Qamesh"

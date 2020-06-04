@@ -27,6 +27,7 @@ import binascii
 from tqdm import tqdm
 import tables as tb
 import csv
+import yaml
 # Third party modules
 import coloredlogs as cl
 import verboselogs
@@ -57,7 +58,8 @@ class MainWindow(QMainWindow):
         self.__conf = analysis_utils.open_yaml_file(file=self.config_dir + "main_cfg.yml", directory=rootdir[:-14])
         self.__appName = self.__conf["Application"]["app_name"] 
         self.__appVersion = self.__conf['Application']['app_version']
-        self.__appIconDir = self.__conf["Application"]["app_icon_dir"]        
+        self.__appIconDir = self.__conf["Application"]["app_icon_dir"]
+        self.__canSettings =  self.__conf["Application"]["can_settings"]
         self._index_items = self.__conf["default_values"]["index_items"]
         self.__bitrate_items = self.__conf['default_values']['bitrate_items']
         self.__bytes = self.__conf["default_values"]["bytes"]
@@ -67,7 +69,7 @@ class MainWindow(QMainWindow):
         self.__interfaceItems = list(self.__conf['CAN_Interfaces'].keys()) 
         self.__channelPorts = self.__conf["channel_ports"]
         self.__devices = self.__conf["Devices"]
-        
+        # Search for predefined CAN settings
         self.__interface = None
         self.__channel = None
         self.__ipAddress = None
@@ -86,12 +88,12 @@ class MainWindow(QMainWindow):
         self.__deviceName = dev["Application"]["device_name"] 
         self.__version = dev['Application']['device_version']
         self.__appIconDir = dev["Application"]["icon_dir"]
-        self.__channelList = dev["Application"]["channelList"]
+        self.__nodeIds = dev["Application"]["nodeIds"]
         self.__dictionary_items = dev["Application"]["index_items"]
         self.__index_items = list(self.__dictionary_items.keys())
         self.__adc_channels_reg = dev["adc_channels_reg"]["adc_channels"]
         self.__adc_index = dev["adc_channels_reg"]["adc_index"]
-        return  self.__deviceName, self.__version,  self.__appIconDir, self.__channelList, self.__dictionary_items, self.__adc_channels_reg, self.__adc_index
+        return  self.__deviceName, self.__version,  self.__appIconDir, self.__nodeIds, self.__dictionary_items, self.__adc_channels_reg, self.__adc_index
     
     def Ui_ApplicationWindow(self):
         self.logger.info("Initializing The Graphical Interface")
@@ -142,6 +144,7 @@ class MainWindow(QMainWindow):
         self.mainLayout.addWidget(self.textBox, 3, 0)
         self.mainLayout.addWidget(line, 4, 0)
         self.mainLayout.addLayout(self.HLayout, 5, 0)
+
         # self.mainLayout.addWidget(self.progressBar,5,0)
         mainFrame.setLayout(self.mainLayout)
         # 3. Show
@@ -156,15 +159,17 @@ class MainWindow(QMainWindow):
     def defaultSettingsWindow(self):
         self.defaultSettingsWindowLayout = QGridLayout()
         __interfaceItems = self.__interfaceItems
-        #self.__smainchannelList = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index="socketcan", subindex="channel")
         __channelList = self.__channelPorts
         interfaceLabel = QLabel("interface")
         interfaceLabel.setText("  Interfaces")
                 
-        interfaceComboBox = QComboBox()
-        for item in __interfaceItems[:]: interfaceComboBox.addItem(item)
-        interfaceComboBox.activated[str].connect(self.set_interface)
-        interfaceComboBox.setStatusTip('Select the connected interface')
+        self.interfaceComboBox = QComboBox()
+        for item in __interfaceItems[:]: self.interfaceComboBox.addItem(item)
+        self.interfaceComboBox.activated[str].connect(self.set_interface)
+        self.interfaceComboBox.setStatusTip('Select the connected interface')
+        self.interfaceComboBox.setCurrentIndex(2)
+        
+        # if self.trendingBox[i].isChecked():
         self.connectButton = QPushButton("")
         icon = QIcon()
         icon.addPixmap(QPixmap('graphics_utils/icons/icon_connect.jpg'), QIcon.Normal, QIcon.On)
@@ -173,16 +178,17 @@ class MainWindow(QMainWindow):
         self.connectButton.setStatusTip('Connect the interface and set the channel')
         self.connectButton.setCheckable(True)
         
+        
         channelLabel = QLabel("Channels")
         channelLabel.setText(" Channels")
         self.channelComboBox = QComboBox()
         self.channelComboBox.setStatusTip('Possible ports as defined in the main_cfg.yml file')
         for item in list(__channelList): self.channelComboBox.addItem(item)  
-
         def on_channelComboBox_currentIndexChanged(channel):
-            _interface = interfaceComboBox.currentText()
+            _interface = self.interfaceComboBox.currentText()
             _channel = self.channelComboBox.currentText()
             _channels = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=_interface, subindex="channels")
+            
             self.set_interface(_interface)
             self.set_channel(int(_channel))
             try:
@@ -193,8 +199,6 @@ class MainWindow(QMainWindow):
                 self.logger.warning("No interface connected to the selected port")
                 self.nodeComboBox.clear()
                 pass
-    
-        self.channelComboBox.currentIndexChanged[str].connect(on_channelComboBox_currentIndexChanged)
         self.channelComboBox.setCurrentIndex(0)  
            
         self.connectButton.clicked.connect(on_channelComboBox_currentIndexChanged)
@@ -203,8 +207,9 @@ class MainWindow(QMainWindow):
         self.defaultSettingsWindowLayout.addWidget(channelLabel, 0, 0)
         self.defaultSettingsWindowLayout.addWidget(self.channelComboBox, 1, 0)
         self.defaultSettingsWindowLayout.addWidget(interfaceLabel, 0, 1)
-        self.defaultSettingsWindowLayout.addWidget(interfaceComboBox, 1, 1)
-        self.defaultSettingsWindowLayout.addWidget(self.connectButton, 1, 2)
+        self.defaultSettingsWindowLayout.addWidget(self.interfaceComboBox, 1, 1)
+        self.defaultSettingsWindowLayout.addWidget(self.connectButton, 1, 3)
+        
                 
     def defaultMessageWindow(self):
         self.defaultMessageWindowLayout = QGridLayout()                        
@@ -249,14 +254,14 @@ class MainWindow(QMainWindow):
         if self.__devices[0] == "None":
             deviceLabel.setText("Configure Device")
             self.deviceButton.setIcon(QIcon('graphics_utils/icons/icon_question.png'))
-            self.deviceButton.clicked.connect(self.update_DeviceBox)
+            self.deviceButton.clicked.connect(self.update_deviceBox)
         else:
             deviceLabel.setText("Configured Device [" + self.__devices[0] + "]")
-            self.update_DeviceBox()
+            self.update_deviceBox()
         self.HLayout.addWidget(deviceLabel)
         self.HLayout.addWidget(self.deviceButton)
 
-    def update_DeviceBox(self):
+    def update_deviceBox(self):
         if self.__devices[0] == "None":
             conf = self.child.open()
         else:
@@ -266,14 +271,14 @@ class MainWindow(QMainWindow):
         self.deviceButton.deleteLater()
         self.HLayout.removeWidget(self.deviceButton)
         self.deviceButton = QPushButton("")
-        deviceName, version, icon_dir, channelList, dictionary_items, adc_channels_reg, adc_index = self.configure_devices(conf)
+        deviceName, version, icon_dir, nodeIds, dictionary_items, adc_channels_reg, adc_index = self.configure_devices(conf)
         
         self.set_adc_channels_reg(adc_channels_reg)
         self.set_adc_index(adc_index)
         self.set_deviceName(deviceName)
         self.set_version(version)
         self.set_icon_dir(icon_dir)
-        self.set_channelList(channelList)
+        self.set_nodeIds(nodeIds)
         self.set_dictionary_items(dictionary_items)                
         self.deviceButton.setIcon(QIcon(self.get_icon_dir()))
         self.deviceButton.clicked.connect(self.show_deviceWindow)
@@ -281,12 +286,36 @@ class MainWindow(QMainWindow):
 
     def set_connect(self):
         if self.connectButton.isChecked():
-            _interface = self.get_interface()
-            _channel = self.get_channel()
-            _channels = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=_interface, subindex="channels")
+            _interface = self.get_interface()    
             try: 
-                _channels[_channel]
-                self.server = controlServer.ControlServer(interface=_interface, channel = _channel, set_channel=True)
+                filename = rootdir[:-14]+self.config_dir +_interface+"_CANSettings.yml"
+                if (os.path.isfile(filename)and self.__canSettings):
+                    filename = os.path.join(rootdir[:-14],self.config_dir +_interface+"_CANSettings.yml")
+                    test_date =time.ctime(os.path.getmtime(filename))
+                    #Load settings from CAN settings file
+                    _canSettings = analysis_utils.open_yaml_file(file=self.config_dir +_interface+"_CANSettings.yml", directory=rootdir[:-14])
+                    self.logger.notice("Loading can settings from the file %s produced on %s"%(filename,test_date))
+                    _channels = _canSettings['CAN_Interfaces'][_interface]["channels"]
+                    _ipAddress = _canSettings['CAN_Interfaces'][_interface]["ipAddress"]
+                    _bitrate = _canSettings['CAN_Interfaces'][_interface]["bitrate"]
+                    _nodIds = _canSettings['CAN_Interfaces'][_interface]["nodIds"]
+                    
+                    #Update settings
+                    self.set_nodeIds(_nodIds)
+                    self.set_channelList(list(str(_channels)))                
+                    self.set_channel(_channels)
+                    #Update buttons
+                    self.channelComboBox.clear()
+                    self.channelComboBox.addItems(list(str(_channels)))
+                    self.nodeComboBox.clear()
+                    self.nodeComboBox.addItems(list(map(str,_nodIds)))
+                    self.server = controlServer.ControlServer(interface=_interface, bitrate = _bitrate, ipAddress = _ipAddress,
+                                                                channel = _channels, set_channel=True)
+                else:
+                    _channel = self.get_channel()
+                    _channels = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=_interface, subindex="channels")
+                    _channels[_channel]
+                    self.server = controlServer.ControlServer(interface=_interface, channel = _channel, set_channel=True)
             except:
                 self.connectButton.setChecked(False)
         else:
@@ -297,6 +326,39 @@ class MainWindow(QMainWindow):
             self.server.stop()
         except:
             pass
+ 
+    def set_all(self):   
+        _bitrate = self.get_bitrate()
+        _interface = self.get_interface()
+        _channel = self.get_channel()
+        _channels = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=_interface, subindex="channels")
+        _nodeItems = _channels[int(_channel)]
+        _timeout = 500
+        if _interface == "AnaGate":
+             self.set_ipAddress(self.firsttextbox.text()) 
+             _ipAddress = self.get_ipAddress()
+        else:
+            _ipAddress = None
+            pass
+        # Change the buttons view in the main GUI
+        self.logger.info("Applying changes to the main server") 
+        self.interfaceComboBox.clear()
+        self.interfaceComboBox.addItems([_interface])
+        self.channelComboBox.clear()
+        self.channelComboBox.addItems([str(_channel)])
+        self.nodeComboBox.clear()
+        self.nodeComboBox.addItems(list(map(str,_nodeItems)))
+        self.connectButton.setChecked(True)
+        #Save the settings into a file
+        dict_file  = {"CAN_Interfaces":   {_interface  :{"bitrate":_bitrate , "ipAddress":str(_ipAddress),"timeout":_timeout,"channels":int(_channel),"nodIds":_nodeItems}}}
+        with open(rootdir[:-14]+self.config_dir +_interface+"_CANSettings.yml", 'w') as yaml_file:
+            documents = yaml.dump(dict_file, yaml_file, default_flow_style=False)
+        
+        # Apply the settings to the main server
+        self.server = controlServer.ControlServer(interface=_interface, bitrate = _bitrate, ipAddress = str(_ipAddress),
+                                            channel = int(_channel), set_channel=True)
+
+        
     '''
     Define can communication messages
     '''
@@ -724,24 +786,7 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(ThirdGroupBox, 2, 0)
         plotframe.setLayout(mainLayout) 
         self.MenuBar.create_statusBar(ChildWindow)
-        QtCore.QMetaObject.connectSlotsByName(ChildWindow)        
-
-    def set_all(self):   
-        _bitrate = self.get_bitrate()
-        _interface = self.get_interface()
-        _channel = self.get_channel()
-        if _interface == "AnaGate":
-             self.set_ipAddress(self.firsttextbox.text()) 
-             _ipAddress = self.get_ipAddress()
-             self.server.set_ipAddress(_ipAddress)
-        else:
-            pass
-        self.server.set_channel(int(_channel))
-        self.server.set_bitrate(_bitrate)
-        self.server.set_interface(_interface)
-        self.server.stop()
-        self.connectButton.setChecked(False)
-        self.server.set_channelConnection(interface=_interface)
+        QtCore.QMetaObject.connectSlotsByName(ChildWindow)                
         
     def BusParametersGroupBox(self, ChildWindow=None, interface="Others"):
         # Define subGroup
@@ -847,32 +892,16 @@ class MainWindow(QMainWindow):
         self.tab2 = QWidget() 
         
         self.GridLayout = QGridLayout()
-        
-        
-        _channelList = self.__channelList
-        channelLabel = QLabel("", self)
-        channelLabel.setText("CAN channels  :")
-        
-        
         nodeLabel = QLabel("", self)
         nodeLabel.setText("Connected nodes :")
         
-        channelComboBox = QComboBox(self)
-        for item in _channelList: channelComboBox.addItem(item)
+
         nodeComboBox = QComboBox(self)
-        nodeItems = analysis_utils.get_subindex_yaml(dictionary = self.__channelList, index =channelComboBox.currentText(), subindex = "connected_nodes")
+        nodeItems = self.__nodeIds
         self.set_nodeIds(nodeItems)
         for item in list(map(str, nodeItems)): nodeComboBox.addItem(item)
-        def on_channelComboBox_currentIndexChanged(index):
-            nodeItems = analysis_utils.get_subindex_yaml(dictionary = self.__channelList, index =index, subindex = "connected_nodes")
-            nodeComboBox.clear()
-            nodeComboBox.addItems(str(nodeItems))
-            
-        channelComboBox.currentIndexChanged[str].connect(on_channelComboBox_currentIndexChanged)
-        channelComboBox.setCurrentIndex(0)
 
         def __set_bus():
-            self.set_channel(channelComboBox.currentText())
             self.set_nodeId(nodeComboBox.currentText())
             
         icon = QLabel(self)
@@ -953,11 +982,6 @@ class MainWindow(QMainWindow):
         self.MenuBar.create_statusBar(ChildWindow)
         channelHLayout= QHBoxLayout()
         nodeHLayout= QHBoxLayout()
-        
-        channelHLayout.addWidget(channelLabel)
-        channelHLayout.addWidget(channelComboBox)
-        channelHLayout.addSpacing(300)
-         
         nodeHLayout.addWidget(nodeLabel)
         nodeHLayout.addWidget(nodeComboBox)
         nodeHLayout.addSpacing(300)

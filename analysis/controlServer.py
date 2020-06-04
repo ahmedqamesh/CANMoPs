@@ -54,11 +54,11 @@ class ControlServer(object):
 
     def __init__(self, parent=None,
                  config=None, interface=None,
-                 bitrate=None,
+                 bitrate=None,ipAddress=None,
+                 channel=None, 
+                 set_channel=False,
                  console_loglevel=logging.INFO,
                  file_loglevel=logging.INFO,
-                 channel=None, ipAddress="192.168.1.254",
-                 set_channel=False,
                  logformat='%(asctime)s - %(levelname)s - %(message)s'):
        
         super(ControlServer, self).__init__()  # super keyword to call its methods from a subclass:
@@ -109,8 +109,7 @@ class ControlServer(object):
         self.__ch = None        
         if set_channel:
             self.set_channelConnection(interface=self.__interface)
-            
-                        
+
         """Internal attribute for the |CAN| channel"""
         self.__busOn = True
         self.__canMsgQueue = deque([], 2)
@@ -251,7 +250,7 @@ class ControlServer(object):
     def set_interface(self, x):
         self.logger.success('Setting the interface to %s' % x)
         self.__interface = x
-        self.__str__()
+
                 
     def set_nodeIds(self, x):
         self.__nodeIds = x

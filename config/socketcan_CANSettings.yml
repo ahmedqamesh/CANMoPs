@@ -1,0 +1,8 @@
+CAN_Interfaces:
+  socketcan:
+    bitrate: 125000
+    channels: 0
+    ipAddress: None
+    nodIds:
+    - 1
+    timeout: 500

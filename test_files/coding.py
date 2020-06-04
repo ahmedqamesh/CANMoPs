@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import struct
 import signal
+import time
 from tqdm import tqdm
 from time import sleep
 original = bytearray(b'\x00P\x80\xfe\x01(\x02\x00')
@@ -14,31 +15,41 @@ print(["#ededed", "#f7e5b2","#fcc48d","#e64e4b","#984071","#58307b","#432776","#
        "#cfe8b7","#d2d2ba","#bab59e","#8b7c99","#6a5c9d"",#4c428d","#3a3487","#31222c"])
 n_channels = np.arange(3, 35)
 
+import yaml
+#dict_file = [{'sports' : ['soccer', 'football', 'basketball', 'cricket', 'hockey', 'table tennis']},
+#{'countries' : ['Pakistan', 'USA', 'India', 'China', 'Germany', 'France', 'Spain']}]
+import os.path
+#os.path.exists("CANSetgs.yaml")
+def open_yaml_file( directory=None , file=None):
+    filename = os.path.join(directory, file)
+    print(filename)
+    with open(filename, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile, Loader=yaml.FullLoader)
+    return cfg
+test_file ='/home/dcs/git/CANMoPs/config/CANSettings.yml'
+__canSettings = open_yaml_file(file="config/CANSettings.yml", directory="/home/dcs/git/CANMoPs/")
+test_date =time.ctime(os.path.getmtime(test_file))
+test_modify = time.ctime(os.path.getctime(test_file))
+print(test_date)                
+_nodIds = __canSettings['CAN_Interfaces']["AnaGate"]["nodIds"]
+print(_nodIds)
+if os.path.isfile("CANSetgs.yml"):
+    print("CANSetgs.yml")
+if os.path.isfile("CANSettings.yml"):
+    print("CANSettings.yml")
+    
+_interface = "AnaGate"
+_bitrate = 125000
+_ipAddress = "192.168.1.254"
+_timeout =  500
+_channels = 1
+_nodId = 1
+dict_file  = {"CAN_Interfaces":   {_interface  :{"bitrate":_bitrate , "ipAddress":_ipAddress,"timeout":_timeout    ,"channels":_channels,"nodIds":[_nodId,2]}}}
+#dict_file ={'A':'a', 'B':{'C':'c', 'D':'d', 'E':'e'}}
+with open(r'/home/dcs/git/CANMoPs/config/CANSettings.yml', 'w') as yaml_file:
+    documents = yaml.dump(dict_file, yaml_file, default_flow_style=False)
 
-from PyQt5 import QtCore
-
-def start_timer(slot, count=1, interval=1000):
-    counter = 0
-    def handler():
-        nonlocal counter
-        counter += 1
-        slot(counter)
-        if counter >= count:
-            timer.stop()
-            timer.deleteLater()
-    timer = QtCore.QTimer()
-    timer.timeout.connect(handler)
-    timer.start(interval)
-
-def timer_func(count):
-    print('Timer:', count)
-    if count >= 5:
-        QtCore.QCoreApplication.quit()
-
-app = QtCore.QCoreApplication([])
-start_timer(timer_func, 5)
-app.exec_()
-
+        
 # for i in tqdm(np.arange(len(n_channels)), ncols = 50, ascii = True, desc ="ADC channels"):
 #     sleep(0.25)
 #     print(i)
