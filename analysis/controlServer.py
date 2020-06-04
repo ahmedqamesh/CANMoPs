@@ -86,17 +86,6 @@ class ControlServer(object):
         self.__channels  = analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="channels")
         self.__channel = list(analysis_utils.get_info_yaml(dictionary=self.__conf['CAN_Interfaces'], index=interface, subindex="channels"))[0]         
         self.logger.notice('... Loading all the configurations!')
-        if device is None:
-            dev = analysis_utils.open_yaml_file(file=config_dir + self.__devices[0] + "_cfg.yml", directory=rootdir[:-8])
-            self.__deviceName = dev["Application"]["device_name"] 
-            self.__version = dev['Application']['device_version']
-            self.__appIconDir = dev["Application"]["icon_dir"]
-            self.__nodeIds = dev["Application"]["nodeIds"]
-            self.__nodeIds = dev["Application"]["nodeIds"]
-            self.__dictionary_items = dev["Application"]["index_items"]
-            self.__index_items = list(self.__dictionary_items.keys())
-            self.__adc_channels_reg = dev["adc_channels_reg"]["adc_channels"]
-            self.__adc_index = dev["adc_channels_reg"]["adc_index"]
         # Initialize default arguments
         """:obj:`str` : Internal attribute for the interface"""
         self.__interface = interface
@@ -294,7 +283,6 @@ class ControlServer(object):
         self.logger.success('Setting the interface to %s' % x)
         self.__interface = x
 
-                
     def set_nodeList(self, x):
         self.__nodeList = x
     

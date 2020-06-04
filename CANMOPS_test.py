@@ -8,7 +8,7 @@ import numpy as np
 from analysis import controlServer
 def test():
     # Define parameters
-    NodeIds = server.get_nodeIds()
+    NodeIds = server.get_nodeList()
     interface =server.get_interface()
     SDO_RX = 0x600
     index = 0x1000
@@ -50,5 +50,5 @@ if __name__=='__main__':
     #server = controlServer.ControlServer(interface = "AnaGate", set_channel =True)
     server = controlServer.ControlServer(interface = "socketcan", set_channel =True)
     #server = controlServer.ControlServer(interface = "Kvaser", set_channel =True)
-    server.read_adc_channels()
+    #server.read_adc_channels()
     test()
